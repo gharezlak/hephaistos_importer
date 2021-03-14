@@ -1,4 +1,4 @@
-import * as SFHI from './log.js';
+import { findRace, findTheme, findClass, findFeat, findEquipment, findSpell } from './compendium.js';
 
 export async function importJson(data) {
     let items = [];
@@ -45,6 +45,7 @@ export async function importJson(data) {
     let equipment = [];
     for (const currentEquipment of data.inventory) {
         // TODO: Item option selection
+        // TODO: isEquipped
         const compendiumEquipment = await findEquipment(currentEquipment.name);
         if (compendiumEquipment) {
             equipment.push(compendiumEquipment);
@@ -53,7 +54,32 @@ export async function importJson(data) {
 
     items.push(...equipment);
 
-    // TODO: Spells
+    // Import Spells
+    let spells = [];
+    for (const currentClass of data.classes) {
+        for (const spell of currentClass.spells) {
+            let spellLevel = undefined;
+            for (const level in spell.level) {
+                if (level.class === currentClass.name) {
+                    spellLevel = level.level;
+                    break;
+                }
+            }
+
+            if (spellLevel === undefined && spell.level) {
+                spellLevel = spell.level[0].level;
+            }
+
+            const compendiumSpell = await findSpell(spell.name);
+            if (compendiumSpell) {
+                compendiumSpell.data.level = spellLevel;
+                spells.push(compendiumSpell);
+            }
+        }
+    }
+
+    items.push(...spells);
+
     // TODO: Conditions
     // TODO: Afflictions
 
@@ -167,50 +193,4 @@ async function addAbilityIncreases(actor, increases) {
             data: data,
         });
     }
-}
-
-async function findRace(name) {
-    return await findInCompendiium('Races', name);
-}
-
-async function findTheme(name) {
-    return await findInCompendiium('Themes', name);
-}
-
-async function findClass(name) {
-    return await findInCompendiium('Classes', name);
-}
-
-async function findFeat(name, isCombatFeat) {
-    if (isCombatFeat) {
-        name += ' (Combat)';
-    }
-
-    return await findInCompendiium('Feats', name);
-}
-
-async function findEquipment(name) {
-    return await findInCompendiium('Equipment', name);
-}
-
-async function findInCompendiium(compendiumName, name) {
-    const compendium = game.packs.find(element => element.title.includes(compendiumName));
-    if (!compendium) {
-        SFHI.error(`No compendium named '${compendiumName}' found.`);
-        return undefined;
-    }
-
-    await compendium.getIndex();
-    let foundEntry = undefined;
-    for (const entry of compendium.index) {
-        if (entry.name.toLowerCase() === name.toLowerCase()) {
-            foundEntry = compendium.getEntry(entry._id);
-            break;
-        }
-    }
-
-    if (!foundEntry) {
-        SFHI.warn(`No item named '${name}' found in compendium '${compendiumName}'`);
-    }
-    return foundEntry;
 }

@@ -5,3 +5,35 @@ A FoundryVTT module that allows importing of characters from [Hephaistos](https:
 1. In Hephaistos, open your character and download it as JSON.
 1. In FoundryVTT, navigate to the *Actors* tab and click the **Import From Hephaistos** button at the bottom.
 1. Select the downloaded JSON file and click **Import**.
+
+## Status
+This module is currently a work-in-progress. A summary of the work done, and remaining to be done can be found below:
+
+- [x] Ability Scores
+- [x] Skills
+- [ ] Races
+    - [x] Basic Import
+    - [ ] Races with alternate ability adjustment
+- [ ] Themes
+    - [x] Basic Import
+- [ ] Classes
+    - [x] Basic Import
+    - [ ] Spells Per Day
+    - [ ] Class Features
+    - [ ] Archetypes
+        - [ ] Basic Import
+        - [ ] Class Features
+- [ ] Feats
+    - [x] Basic Import
+    - [ ] Feat Option
+- [ ] Equipment
+    - [ ] Basic Import
+    - [ ] Is Equipped/Installed
+    - [ ] Enhancements
+        - [ ] Weapon Fusions on Weapons & Shields
+        - [ ] Armor Upgrades on Armor & Shields
+        - [ ] Weapon Accessories on Weapons
+    - [ ] Equipment Options
+- [x] Spells
+- [ ] Conditions
+- [ ] Afflictions
