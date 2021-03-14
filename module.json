@@ -1,0 +1,11 @@
+{
+    "name": "hephaistos-importer",
+    "title": "Hephaistos Importer",
+    "description": "A module to import characters, starships and more from Hephaistos",
+    "author": "Hephaistos",
+    "systems": ["sfrpg"],
+    "esmodules": ["./esmodules/main.js"],
+    "version": "0.1.0",
+    "minimumCoreVersion": "0.6.4",
+    "compatibleCoreVersion": "0.7.9"
+}
