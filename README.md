@@ -13,7 +13,7 @@ This module is currently a work-in-progress. A summary of the work done, and rem
 - [x] Skills
 - [ ] Races
     - [x] Basic Import
-    - [ ] Races with alternate ability adjustment
+    - [x] Races with alternate ability adjustment
     - [ ] Racial trait options
 - [ ] Themes
     - [x] Basic Import
@@ -30,7 +30,7 @@ This module is currently a work-in-progress. A summary of the work done, and rem
     - [ ] Feat Option
 - [ ] Equipment
     - [x] Basic Import
-    - [ ] Is Equipped/Installed
+    - [x] Is Equipped/Installed
     - [ ] Enhancements
         - [ ] Weapon Fusions on Weapons & Shields
         - [ ] Armor Upgrades on Armor & Shields

@@ -1,6 +1,15 @@
 import * as SFHI from './log.js';
 
-export async function findRace(name) {
+export async function findRace(race) {
+    if (!race) {
+        return undefined;
+    }
+
+    let name = race.name;
+    if (race.abilityAdjustment.name !== 'Standard') {
+        name += ' ' + race.abilityAdjustment.name
+    }
+
     return await findInCompendium('Races', name);
 }
 
@@ -43,33 +52,34 @@ async function findInCompendium(compendiumName, name) {
     }
 
     await compendium.getIndex();
-    let foundEntry = undefined;
-    let foundLevDistance = 5; // Limit the max differences to 5. This allows for missing commas or other similarly minor changes
+
+    // Limit the max differences to 4. This allows only for minor differences.
+    const MAX_LEVENSHTEIN_DISTANCE = 4;
+    let foundEntryId = undefined;
+    let foundLevDistance = MAX_LEVENSHTEIN_DISTANCE;
 
     for (const entry of compendium.index) {
-        const lowerCaseEntry = entry.name.toLowerCase();
-        const lowerCaseName = name.toLowerCase();
-        if (lowerCaseEntry === lowerCaseName) {
-            foundEntry = await compendium.getEntry(entry._id);
+        const res = fuzzyEquals(entry.name, name, MAX_LEVENSHTEIN_DISTANCE);
+        
+        if (res === 0) {
+            foundEntryId = entry._id;
             foundLevDistance = 0;
             break;
-        }
-
-        const levDistance = levenshtein_distance(lowerCaseEntry, lowerCaseName);
-        if (levDistance <= foundLevDistance) {
-            foundEntry = await compendium.getEntry(entry._id);
-            foundLevDistance = levDistance;
+        } else if (res > 0 && res <= foundLevDistance) {
+            foundEntryId = entry._id;
+            foundLevDistance = res;
         }
     }
 
     // Clear the object before next run.
     distances = {};
 
-    if (!foundEntry) {
+    if (!foundEntryId) {
         SFHI.warn(`No item named '${name}' found in compendium '${compendiumName}'`);
         return undefined;
     }
 
+    const foundEntry = await compendium.getEntry(foundEntryId);
     if (foundLevDistance > 0) {
         SFHI.warn(`Exact match for '${name}' not found in compendium '${compendiumName}'. Using '${foundEntry.name}' (lev distance = ${foundLevDistance}) instead.`);
     }
@@ -77,7 +87,63 @@ async function findInCompendium(compendiumName, name) {
     return foundEntry;
 }
 
-function levenshtein_distance(a, b) {
+function fuzzyEquals(a, b, distanceThreshold) {
+    // Remove punctuation, brackets and other such symbols and split the strings
+    // into "words" using whitespace
+    const processedA = processString(a);
+    const processedB = processString(b);
+    
+    if (processedA === processedB) {
+        return 0;
+    }
+
+    // Artificially add to the processed arrays to make them of equal length
+    while (processedA.length < processedB.length) {
+        processedA.push('');
+    }
+    
+    while (processedB.length < processedA.length) {
+        processedB.push('');
+    }
+
+    // Derive the total Levenshtein distance between the two processed strings
+    let distance = 0;
+    for (const elemA of processedA) {
+        // Find the minimum distance for elemA by comparing it to all words in
+        // processedB
+        let localDistance = distanceThreshold + 1;
+        for (const elemB of processedB) {
+            if (elemA === elemB) {
+                localDistance = 0;
+                break;
+            }
+            let levDistance = levenshteinDistance(elemA, elemB);
+            if (levDistance < localDistance) {
+                localDistance = levDistance;
+            }
+        }
+
+        distance += localDistance;
+        if (distance > distanceThreshold) {
+            return -1;
+        }
+    }
+
+    return distance;
+}
+
+function processString(str) {
+    return str.toLowerCase()
+        .replace(',', '')
+        .replace('.', '')
+        .replace('!', '')
+        .replace('(', '')
+        .replace(')', '')
+        .split(' ')
+        .sort();
+}
+
+function levenshteinDistance(a, b) {
     if (distances[a]?.[b] !== undefined) {
         return distances[a][b];
     }
@@ -94,13 +160,13 @@ function levenshtein_distance(a, b) {
     const tailB = b.substr(1);
 
     if (a.charAt(0) === b.charAt(0)) {
-        return levenshtein_distance(tailA, tailB);
+        return levenshteinDistance(tailA, tailB);
     }
 
     if (distances[a] === undefined) {
         distances[a] = {}
     }
 
-    distances[a][b] = 1 + Math.min(levenshtein_distance(tailA, b), levenshtein_distance(a, tailB), levenshtein_distance(tailA, tailB));
+    distances[a][b] = 1 + Math.min(levenshteinDistance(tailA, b), levenshteinDistance(a, tailB), levenshteinDistance(tailA, tailB));
     return distances[a][b];
 }

@@ -5,7 +5,7 @@ export async function importJson(data) {
         let items = [];
 
         // Import Race
-        const race = await findRace(data.race?.name);
+        const race = await findRace(data.race);
         if (race) {
             items.push(race);
         }
