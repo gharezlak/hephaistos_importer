@@ -1,105 +1,109 @@
 import { findRace, findTheme, findClass, findFeat, findEquipment, findSpell } from './compendium.js';
 
 export async function importJson(data) {
-    return new Promise(async resolve => {
-        let items = [];
+    let items = [];
 
-        // Import Race
-        const race = await findRace(data.race);
-        if (race) {
-            items.push(race);
+    // Import Race
+    const race = await findRace(data.race);
+    if (race) {
+        items.push(race);
+    }
+
+    // Import Theme
+    const theme = await findTheme(data.theme?.name);
+    if (theme) {
+        items.push(theme);
+    }
+
+    // Import Classes
+    let classes = [];
+    for (const currentClass of data.classes) {
+        const compendiumClass = await findClass(currentClass.name);
+        // TODO: Class features
+        // TODO: Archetype
+        if (compendiumClass) {
+            compendiumClass.data.levels = currentClass.levels;
+            classes.push(compendiumClass);
         }
+    }
 
-        // Import Theme
-        const theme = await findTheme(data.theme?.name);
-        if (theme) {
-            items.push(theme);
+    items.push(...classes);
+
+    // Import Feats
+    let feats = [];
+    for (const currentFeat of data.feats.acquiredFeats) {
+        // TODO: Feat option selection
+        const compendiumFeat = await findFeat(currentFeat.name, currentFeat.isCombatFeat);
+        if (compendiumFeat) {
+            feats.push(compendiumFeat);
         }
+    }
 
-        // Import Classes
-        let classes = [];
-        for (const currentClass of data.classes) {
-            const compendiumClass = await findClass(currentClass.name);
-            // TODO: Class features
-            // TODO: Archetype
-            if (compendiumClass) {
-                compendiumClass.data.levels = currentClass.levels;
-                classes.push(compendiumClass);
+    items.push(...feats);
+
+    // Import Equipment
+    let equipment = [];
+    for (const currentEquipment of data.inventory) {
+        // TODO: Item option selection
+        const compendiumEquipment = await findEquipment(currentEquipment.name);
+        if (compendiumEquipment) {
+            compendiumEquipment.data.equipped = currentEquipment.isEquipped;
+
+            if (compendiumEquipment?.data?.container?.contents) {
+                compendiumEquipment.data.container.contents = [];
+                await addEnhancements(compendiumEquipment, currentEquipment.fusionIds, data.inventory);
+                await addEnhancements(compendiumEquipment, currentEquipment.accessoryIds, data.inventory);
+                await addEnhancements(compendiumEquipment, currentEquipment.upgradeIds, data.inventory);
             }
+
+            equipment.push(compendiumEquipment);
         }
+    }
 
-        items.push(...classes);
+    items.push(...equipment);
 
-        // Import Feats
-        let feats = [];
-        for (const currentFeat of data.feats.acquiredFeats) {
-            // TODO: Feat option selection
-            const compendiumFeat = await findFeat(currentFeat.name, currentFeat.isCombatFeat);
-            if (compendiumFeat) {
-                feats.push(compendiumFeat);
-            }
-        }
-
-        items.push(...feats);
-
-        // Import Equipment
-        let equipment = [];
-        for (const currentEquipment of data.inventory) {
-            // TODO: Item option selection
-            const compendiumEquipment = await findEquipment(currentEquipment.name);
-            if (compendiumEquipment) {
-                compendiumEquipment.data.equipped = currentEquipment.isEquipped;
-                equipment.push(compendiumEquipment);
-            }
-        }
-
-        items.push(...equipment);
-
-        // Import Spells
-        let spells = [];
-        for (const currentClass of data.classes) {
-            for (const spell of currentClass.spells) {
-                let spellLevel = undefined;
-                for (const level in spell.level) {
-                    if (level.class === currentClass.name) {
-                        spellLevel = level.level;
-                        break;
-                    }
-                }
-
-                if (spellLevel === undefined && spell.level) {
-                    spellLevel = spell.level[0].level;
-                }
-
-                const compendiumSpell = await findSpell(spell.name);
-                if (compendiumSpell) {
-                    compendiumSpell.data.level = spellLevel;
-                    spells.push(compendiumSpell);
+    // Import Spells
+    let spells = [];
+    for (const currentClass of data.classes) {
+        for (const spell of currentClass.spells) {
+            let spellLevel = undefined;
+            for (const level in spell.level) {
+                if (level.class === currentClass.name) {
+                    spellLevel = level.level;
+                    break;
                 }
             }
+
+            if (spellLevel === undefined && spell.level) {
+                spellLevel = spell.level[0].level;
+            }
+
+            const compendiumSpell = await findSpell(spell.name);
+            if (compendiumSpell) {
+                compendiumSpell.data.level = spellLevel;
+                spells.push(compendiumSpell);
+            }
         }
+    }
 
-        items.push(...spells);
+    items.push(...spells);
 
-        // TODO: Conditions
-        // TODO: Afflictions
+    // TODO: Afflictions
 
-        // Create Actor
-        let actor = await Actor.create({
-            name: data.name,
-            type: 'character',
-            data: {
-                abilities: importAbilities(data.abilityScores),
-                skills: importSkills(data.skills),
-                conditions: importConditions(data.conditions),
-                spells: importSpellsPerDay(data.classes),
-            },
-            items: items,
-        });
-        
-        await addAbilityIncreases(actor, data.abilityScores.increases);
-        resolve();
+    // Create Actor
+    let actor = await Actor.create({
+        name: data.name,
+        type: 'character',
+        data: {
+            abilities: importAbilities(data.abilityScores),
+            skills: importSkills(data.skills),
+            conditions: importConditions(data.conditions),
+            spells: importSpellsPerDay(data.classes),
+        },
+        items: items,
     });
+    
+    await addAbilityIncreases(actor, data.abilityScores.increases);
 }
 
 function importAbilities(abilityScores) {
@@ -283,4 +287,22 @@ async function addAbilityIncreases(actor, increases) {
             data: data,
         });
     }
+}
+
+async function addEnhancements(equipment, enhancementIds, inventory) {
+    if (!enhancementIds) {
+        return;
+    }
+
+    const dataEnhancements = inventory.filter(e => enhancementIds.some(f => f === e.id));
+    for(const fusion of dataEnhancements) {
+        const compendiumEnhancement = await findEquipment(fusion.name);
+        if (compendiumEnhancement) {
+            equipment.data.container.contents.push({
+                id: compendiumEnhancement._id,
+                index: 0,
+            });
+        }
+    }
+
 }

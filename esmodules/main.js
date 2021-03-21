@@ -1,5 +1,6 @@
 import { HephaistosImportDialog } from './import-dialog.js';
 import { importJson } from './importer.js';
+import * as SFHI from './log.js';
 
 function addImportButton() {
     if (!Actor.can(game.user, 'create')) {
@@ -22,7 +23,7 @@ function addImportButton() {
             if (!file) {
                 return;
             }
-            
+
             let loadingDialog = new Dialog({
                 title: 'Hephaistos Importer',
                 content: `
@@ -37,10 +38,32 @@ function addImportButton() {
 
             loadingDialog.render(true);
 
-            const text = await file.text();
-            await importJson(JSON.parse(text));
+            try {
+                const text = await file.text();
+                await importJson(JSON.parse(text));
+                
+                await loadingDialog.close();
+            } catch(e) {
+                await loadingDialog.close();
 
-            await loadingDialog.close();
+                SFHI.error(e);
+                let errorDialog = new Dialog({
+                    title: 'Hephaistos Importer',
+                    content: `
+                        <div>
+                            <h3>Import Failed</h3>
+                            <p><code>${e}</code></p>
+                        </div>`,
+                    buttons: {
+                        ok: {
+                            icon: '<i class="fas fa-check"></i>',
+                            label: "OK",
+                            callback: () => {},
+                        },
+                    },
+                });
+                errorDialog.render(true);
+            }
         };
 
         const createEntityButton = actorFooter.getElementsByClassName('create-entity')[0];

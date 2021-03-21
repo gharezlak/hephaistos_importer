@@ -81,7 +81,7 @@ async function findInCompendium(compendiumName, name) {
 
     const foundEntry = await compendium.getEntry(foundEntryId);
     if (foundLevDistance > 0) {
-        SFHI.warn(`Exact match for '${name}' not found in compendium '${compendiumName}'. Using '${foundEntry.name}' (lev distance = ${foundLevDistance}) instead.`);
+        SFHI.warn(`Exact match for '${name}' not found in compendium '${compendiumName}'. Using '${foundEntry.name}' (Levenshtein Distance = ${foundLevDistance}) instead.`);
     }
 
     return foundEntry;
