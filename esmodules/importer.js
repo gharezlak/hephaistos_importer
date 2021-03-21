@@ -99,6 +99,9 @@ export async function importJson(data) {
             skills: importSkills(data.skills),
             conditions: importConditions(data.conditions),
             spells: importSpellsPerDay(data.classes),
+            currency: {
+                credit: data.credits,
+            }
         },
         items: items,
     });
