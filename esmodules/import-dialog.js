@@ -12,7 +12,7 @@ export class HephaistosImportDialog extends Dialog {
         return new Promise(async resolve => {
             const html = await renderTemplate('modules/hephaistos-importer/templates/import-dialog.html');
             const dialog = new HephaistosImportDialog({
-                title: 'Hephaistos Import',
+                title: 'Hephaistos Importer',
                 content: html,
                 buttons: {
                     import: {

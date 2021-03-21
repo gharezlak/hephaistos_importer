@@ -22,9 +22,25 @@ function addImportButton() {
             if (!file) {
                 return;
             }
+            
+            let loadingDialog = new Dialog({
+                title: 'Hephaistos Importer',
+                content: `
+                    <div style="text-align:center;">
+                        <p style="font-size: 2rem; margin: 0.25em 0;">
+                            <i class="fas fa-cog" style="animation: rotation 2.5s infinite linear;"></i>
+                        </p>
+                        <p>Importing...</p>
+                    </div>`,
+                buttons: {},
+            });
+
+            loadingDialog.render(true);
 
             const text = await file.text();
-            importJson(JSON.parse(text));
+            await importJson(JSON.parse(text));
+
+            await loadingDialog.close();
         };
 
         const createEntityButton = actorFooter.getElementsByClassName('create-entity')[0];

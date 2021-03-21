@@ -14,11 +14,13 @@ This module is currently a work-in-progress. A summary of the work done, and rem
 - [ ] Races
     - [x] Basic Import
     - [ ] Races with alternate ability adjustment
+    - [ ] Racial trait options
 - [ ] Themes
     - [x] Basic Import
+    - [ ] Theme Knowledge selection
 - [ ] Classes
     - [x] Basic Import
-    - [ ] Spells Per Day
+    - [x] Spells Per Day
     - [ ] Class Features
     - [ ] Archetypes
         - [ ] Basic Import
@@ -27,7 +29,7 @@ This module is currently a work-in-progress. A summary of the work done, and rem
     - [x] Basic Import
     - [ ] Feat Option
 - [ ] Equipment
-    - [ ] Basic Import
+    - [x] Basic Import
     - [ ] Is Equipped/Installed
     - [ ] Enhancements
         - [ ] Weapon Fusions on Weapons & Shields
@@ -35,5 +37,6 @@ This module is currently a work-in-progress. A summary of the work done, and rem
         - [ ] Weapon Accessories on Weapons
     - [ ] Equipment Options
 - [x] Spells
-- [ ] Conditions
+- [x] Conditions
+    - [ ] Negative Levels
 - [ ] Afflictions
