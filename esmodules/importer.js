@@ -101,7 +101,13 @@ export async function importJson(data) {
             spells: importSpellsPerDay(data.classes),
             currency: {
                 credit: data.credits,
-            }
+            },
+            traits: {
+                size: data.race?.size.toLowerCase()
+            },
+            attributes: {
+                keyability: calculateKeyAbility(data.classes),
+            },
         },
         items: items,
     });
@@ -118,6 +124,29 @@ function importAbilities(abilityScores) {
         wis: importAbility(abilityScores.wisdom),
         cha: importAbility(abilityScores.charisma),
     }
+}
+
+function calculateKeyAbility(classes) {
+    if (!classes) {
+        return undefined;
+    }
+
+    if (classes.length === 1) {
+        return classes[0].keyAbility.toLowerCase().substring(0, 3);
+    }
+
+    // else find the most "popular" key ability
+    let keyAbilities = new Map();
+    for(const c of classes) {
+        if (keyAbilities.has(c.keyAbility)) {
+            keyAbilities.set(c.keyAbility, keyAbilities.get(c.keyAbility) + c.levels);
+        } else {
+            keyAbilities.set(c.keyAbility, c.levels);
+        }
+    }
+
+    const keyAbility = [...keyAbilities.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    return keyAbility.toLowerCase().substring(0, 3);
 }
 
 function importAbility(ability) {
