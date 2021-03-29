@@ -1,4 +1,5 @@
 import { findRace, findTheme, findClass, findFeat, findEquipment, findSpell } from './compendium.js';
+import { parseEffect } from './effect-parser.js';
 
 export async function importJson(data) {
     let items = [];
@@ -28,18 +29,6 @@ export async function importJson(data) {
     }
 
     items.push(...classes);
-
-    // Import Feats
-    let feats = [];
-    for (const currentFeat of data.feats.acquiredFeats) {
-        // TODO: Feat option selection
-        const compendiumFeat = await findFeat(currentFeat.name, currentFeat.isCombatFeat);
-        if (compendiumFeat) {
-            feats.push(compendiumFeat);
-        }
-    }
-
-    items.push(...feats);
 
     // Import Equipment
     let equipment = [];
@@ -109,8 +98,52 @@ export async function importJson(data) {
                 keyability: calculateKeyAbility(data.classes),
             },
         },
-        items: items,
     });
+
+    // Import Feats
+    let feats = [];
+    for (const currentFeat of data.feats.acquiredFeats) {
+        const parseEffects = async (name, effects) => {
+            let mod = [];
+            for (const e of effects) {
+                let res = await parseEffect(actor, name, e);
+                if (res) {
+                    mod.push(res);
+                }
+            }
+
+            return mod;
+        }
+
+        // TODO: Feat option selection
+        const compendiumFeat = await findFeat(currentFeat.name, currentFeat.isCombatFeat);
+        if (compendiumFeat) {
+            let modifiers = []
+            if (currentFeat.benefitEffect) {
+                let mods = await parseEffects(currentFeat.name, currentFeat.benefitEffect);
+                modifiers.push(...mods);
+            }
+
+            if (currentFeat.selectedOptions) {
+                for (const so of currentFeat.selectedOptions) {
+                    if (so.effect) {
+                        let mods = await parseEffects(`${currentFeat.name} (${so.name})`, so.effect);
+                        modifiers.push(...mods);
+                    }
+                }
+            }
+
+            compendiumFeat.data.modifiers = modifiers;
+            feats.push(compendiumFeat);
+        }
+    }
+
+    items.push(...feats);
+
+    for (const i of items) {
+        i['_id'] = undefined;
+        await actor.createOwnedItem(i);
+    }
     
     await addAbilityIncreases(actor, data.abilityScores.increases);
 }
