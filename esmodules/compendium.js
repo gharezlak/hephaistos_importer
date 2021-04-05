@@ -134,6 +134,8 @@ function fuzzyEquals(a, b, distanceThreshold) {
 
 function processString(str) {
     return str.toLowerCase()
+        .replace(' (magic)', '')
+        .replace(' (hybrid)', '')
         .replace(',', '')
         .replace('.', '')
         .replace('!', '')

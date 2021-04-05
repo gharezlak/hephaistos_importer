@@ -96,6 +96,7 @@ export async function importJson(data) {
             },
             attributes: {
                 keyability: calculateKeyAbility(data.classes),
+                speed: importSpeed(data.speed),
             },
         },
     });
@@ -157,6 +158,35 @@ function importAbilities(abilityScores) {
         wis: importAbility(abilityScores.wisdom),
         cha: importAbility(abilityScores.charisma),
     }
+}
+
+function importSpeed(speed) {
+    const value = `${speed.land} ft.`;
+    const other = [];
+
+    if (speed.burrow) {
+        other.push(`burrow ${speed.burrow} ft.`);
+    }
+    if (speed.swim) {
+        other.push(`swim ${speed.swim} ft.`);
+    }
+    if (speed.climb) {
+        other.push(`climb ${speed.climb} ft.`);
+    }
+    if (speed.flyClumsy) {
+        other.push(`fly (clumsy) ${speed.flyClumsy} ft.`);
+    }
+    if (speed.flyAverage) {
+        other.push(`fly (average) ${speed.flyAverage} ft.`);
+    }
+    if (speed.flyPerfect) {
+        other.push(`fly (perfect) ${speed.flyPerfect} ft.`);
+    }
+
+    return {
+        value: value,
+        special: other.join(', '),
+    };
 }
 
 function calculateKeyAbility(classes) {
