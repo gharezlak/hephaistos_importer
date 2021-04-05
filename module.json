@@ -7,8 +7,8 @@
     "esmodules": ["./esmodules/main.js"],
     "version": "0.2.0",
     "url": "https://gitlab.com/aetna/foundry-import-module",
-    "manifest": "https://gitlab.com/aetna/foundry-import-module/-/raw/0.1.0/module.json",
-    "download": "https://gitlab.com/aetna/foundry-import-module/-/archive/0.1.0/foundry-import-module-0.1.0.zip",
+    "manifest": "https://gitlab.com/aetna/foundry-import-module/-/raw/0.2.0/module.json",
+    "download": "https://gitlab.com/aetna/foundry-import-module/-/archive/0.2.0/foundry-import-module-0.2.0.zip",
     "minimumCoreVersion": "0.7.9",
     "compatibleCoreVersion": "0.7.9"
 }
