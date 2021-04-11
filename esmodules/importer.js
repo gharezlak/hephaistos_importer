@@ -1,58 +1,86 @@
 import { findRace, findTheme, findClass, findFeat, findEquipment, findSpell } from './compendium.js';
 import { parseEffect } from './effect-parser.js';
+import { HephaistosMissingItemsDialog } from './missing-items-dialog.js';
 
 export async function importJson(data) {
     let items = [];
+    let notFound = [];
 
     // Import Race
-    const race = await findRace(data.race);
+    const race = await findRace(data.race, data.race.abilityAdjustment.name);
     if (race) {
-        items.push(race);
+        if (race.exact) {
+            items.push(race.value);
+        } else {
+            notFound.push({name: data.race.name, compendium: race.value, find: (x) => findRace(x)});
+        }
+    } else if (data.race) {
+        notFound.push({name: data.race.name, find: (x) => findRace(x)});
     }
 
     // Import Theme
     const theme = await findTheme(data.theme?.name);
     if (theme) {
-        items.push(theme);
+        if (theme.exact) {
+            items.push(theme.value);
+        } else {
+            notFound.push({name: data.theme.name, compendium: theme.value, find: (x) => findTheme(x)});
+        }
+    } else if (data.theme) {
+        notFound.push({name: data.theme.name, find: (x) => findTheme(x)});
     }
 
     // Import Classes
-    let classes = [];
     for (const currentClass of data.classes) {
+        const after = async (x) =>  {
+            x.data.levels = currentClass.levels;
+        }
+
         const compendiumClass = await findClass(currentClass.name);
         // TODO: Class features
         // TODO: Archetype
-        if (compendiumClass) {
-            compendiumClass.data.levels = currentClass.levels;
-            classes.push(compendiumClass);
+        if (compendiumClass?.exact) {
+            await after(compendiumClass.value);
+            items.push(compendiumClass.value);
+        } else {
+            notFound.push({
+                name: currentClass.name, 
+                compendium: compendiumClass?.value,
+                find: (x) => findClass(x),
+                after: after,
+            });
         }
     }
-
-    items.push(...classes);
 
     // Import Equipment
-    let equipment = [];
     for (const currentEquipment of data.inventory) {
+        const after = async (x) => {
+            x.data.equipped = currentEquipment.isEquipped;
+
+            if (x?.data?.container?.contents) {
+                x.data.container.contents = [];
+                await addEnhancements(x, currentEquipment.fusionIds, data.inventory);
+                await addEnhancements(x, currentEquipment.accessoryIds, data.inventory);
+                await addEnhancements(x, currentEquipment.upgradeIds, data.inventory);
+            }
+        };
+
         // TODO: Item option selection
         const compendiumEquipment = await findEquipment(currentEquipment.name);
-        if (compendiumEquipment) {
-            compendiumEquipment.data.equipped = currentEquipment.isEquipped;
-
-            if (compendiumEquipment?.data?.container?.contents) {
-                compendiumEquipment.data.container.contents = [];
-                await addEnhancements(compendiumEquipment, currentEquipment.fusionIds, data.inventory);
-                await addEnhancements(compendiumEquipment, currentEquipment.accessoryIds, data.inventory);
-                await addEnhancements(compendiumEquipment, currentEquipment.upgradeIds, data.inventory);
-            }
-
-            equipment.push(compendiumEquipment);
+        if (compendiumEquipment?.exact) {
+            await after(compendiumEquipment.value);
+            items.push(compendiumEquipment.value);
+        } else {
+            notFound.push({
+                name: currentEquipment.name, 
+                compendium: compendiumEquipment?.value,
+                find: (x) => findEquipment(x),
+                after: after,
+            });
         }
     }
 
-    items.push(...equipment);
-
     // Import Spells
-    let spells = [];
     for (const currentClass of data.classes) {
         for (const spell of currentClass.spells) {
             let spellLevel = undefined;
@@ -66,21 +94,26 @@ export async function importJson(data) {
             if (spellLevel === undefined && spell.level) {
                 spellLevel = spell.level[0].level;
             }
+            const after = async (x) => x.data.level = spellLevel;
 
             const compendiumSpell = await findSpell(spell.name);
-            if (compendiumSpell) {
-                compendiumSpell.data.level = spellLevel;
-                spells.push(compendiumSpell);
+            if (compendiumSpell?.exact) {
+                await after(compendiumSpell.value);
+                items.push(compendiumSpell.value);
+            } else {
+                notFound.push({
+                    name: spell.name, 
+                    compendium: compendiumSpell?.value,
+                    find: (x) => findSpell(x),
+                    after: after,
+                });
             }
         }
     }
 
-    items.push(...spells);
-
     // TODO: Afflictions
 
-    // Create Actor
-    let actor = await Actor.create({
+    let actorData = {
         name: data.name,
         type: 'character',
         data: {
@@ -92,33 +125,31 @@ export async function importJson(data) {
                 credit: data.credits,
             },
             traits: {
-                size: data.race?.size.toLowerCase()
+                size: data.race?.size.toLowerCase(),
+
             },
             attributes: {
                 keyability: calculateKeyAbility(data.classes),
                 speed: importSpeed(data.speed),
             },
         },
-    });
+    };
 
     // Import Feats
-    let feats = [];
     for (const currentFeat of data.feats.acquiredFeats) {
         const parseEffects = async (name, effects) => {
             let mod = [];
             for (const e of effects) {
-                let res = await parseEffect(actor, name, e);
+                let res = await parseEffect(actorData, name, e);
                 if (res) {
                     mod.push(res);
                 }
             }
 
             return mod;
-        }
+        };
 
-        // TODO: Feat option selection
-        const compendiumFeat = await findFeat(currentFeat.name, currentFeat.isCombatFeat);
-        if (compendiumFeat) {
+        const after = async (x) => {
             let modifiers = []
             if (currentFeat.benefitEffect) {
                 let mods = await parseEffects(currentFeat.name, currentFeat.benefitEffect);
@@ -134,12 +165,64 @@ export async function importJson(data) {
                 }
             }
 
-            compendiumFeat.data.modifiers = modifiers;
-            feats.push(compendiumFeat);
+            x.data.modifiers = modifiers;
+        };
+
+        // TODO: Feat option selection
+        const compendiumFeat = await findFeat(currentFeat.name, currentFeat.isCombatFeat);
+        if (compendiumFeat?.exact) {
+            await after(compendiumFeat.value);
+            items.push(compendiumFeat.value);
+        } else {
+            notFound.push({
+                name: currentFeat.name, 
+                compendium: compendiumFeat?.value,
+                find: (x) => findFeat(x),
+                after: after,
+            });
         }
     }
 
-    items.push(...feats);
+    if (notFound) {
+        try {
+            const uniqueNotFound = new Map();
+            for (const nf of notFound) {
+                uniqueNotFound.set(nf.name, nf);
+            }
+
+            const replacedItems = await HephaistosMissingItemsDialog.createAndShow([...uniqueNotFound.values()]);
+            for(const ri of replacedItems) {
+                if (!ri.compendium) {
+                    continue;
+                }
+
+                const repeats = notFound.reduce((n, x) => n + (x.name === ri.name), 0);
+                if (typeof ri.compendium === 'string') {
+                    let found = await ri.find(ri.compendium);
+                    if (!found) {
+                        continue;
+                    }
+
+                    for(let i = 0; i < repeats; i++) {
+                        if (ri.after) {
+                            await ri.after(found.value);
+                        }
+                        items.push(found.value);
+                    }
+                } else {
+                    for(let i = 0; i < repeats; i++) {
+                        await ri.after(ri.compendium);
+                        items.push(ri.compendium);
+                    }
+                }
+            }
+        } catch {
+            return;
+        }
+    }
+
+    // Create Actor
+    let actor = await Actor.create(actorData);
 
     for (const i of items) {
         i['_id'] = undefined;

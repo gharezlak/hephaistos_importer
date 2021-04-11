@@ -155,17 +155,21 @@ function parseBonus(source, bonus) {
     }
 }
 
-export async function parseAppend(actor, params) {
+export async function parseAppend(actorData, params) {
     if (params.property === 'character.proficiency.weapon') {
         const value = convert(weaponTypeMapping, params.value?.weaponType);
         if (!value) {
             return;
         }
 
-        if (actor._data.data.traits.weaponProf.value) {
-            actor._data.data.traits.weaponProf.value.push(value);
+        if (!actorData.data.traits.weaponProf) {
+            actorData.data.traits.weaponProf = {};
+        }
+
+        if (actorData.data.traits.weaponProf.value) {
+            actorData.data.traits.weaponProf.value.push(value);
         } else {
-            actor._data.data.traits.weaponProf.value = [value];
+            actorData.data.traits.weaponProf.value = [value];
         }
     } else if (params.property === 'character.proficiency.armor') {
         const value = convert(armorTypeMapping, params.value?.armorType);
@@ -173,22 +177,23 @@ export async function parseAppend(actor, params) {
             return;
         }
 
-        if (actor._data.data.traits.armorProf) {
-            actor._data.data.traits.armorProf.value.push(value);
+        if (!actorData.data.traits.armorProf) {
+            actorData.data.traits.armorProf = {};
+        }
+
+        if (actorData.data.traits.armorProf.value) {
+            actorData.data.traits.armorProf.value.push(value);
         } else {
-            actor._data.data.traits.armorProf.value = [value];
+            actorData.data.traits.armorProf.value = [value];
         }
     }
-
-    await actor.update(actor._data);
-    await actor.prepareData();
 } 
 
-export async function parseEffect(actor, source, effect) {
+export async function parseEffect(actorData, source, effect) {
     if (effect.bonus) {
         return parseBonus(source, effect.bonus);
     } else if (effect.append) {
-        return await parseAppend(actor, effect.append);
+        return await parseAppend(actorData, effect.append);
     }
 
     return undefined;

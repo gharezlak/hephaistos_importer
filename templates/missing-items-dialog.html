@@ -1,0 +1,17 @@
+<form id="sfhi-missing-items-dialog-form">
+    <p>No exact matches were found in the compendium for the following items. Please specify the exact names of existing compendiums items to use, or leave blank to skip.</p>
+    <div class="form-group">
+        <b style="flex: 1;">Hephaistos</b>
+        <b style="flex: 1;">Compendium</b>
+    </div>
+    {{#each items as |item|}}
+        <div class="form-group">
+            <label style="flex: 1; padding-right: 0.25rem;">{{item.name}}</label>
+            {{#if item.compendium}}
+                <input id="{{@index}}" style="flex: 1;" type="text" value="{{item.compendium.name}}"/>
+            {{else}}
+                <input id="{{@index}}" style="flex: 1;" type="text" placeholder="Not Found"/>
+            {{/if}}
+        </div>
+    {{/each}}
+</form>

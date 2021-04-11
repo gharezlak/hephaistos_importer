@@ -1,13 +1,13 @@
 import * as SFHI from './log.js';
 
-export async function findRace(race) {
+export async function findRace(race, abilityAdjustment) {
     if (!race) {
         return undefined;
     }
 
     let name = race.name;
-    if (race.abilityAdjustment.name !== 'Standard') {
-        name += ' ' + race.abilityAdjustment.name
+    if (abilityAdjustment && abilityAdjustment !== 'Standard') {
+        name += ' ' + abilityAdjustment;
     }
 
     return await findInCompendium('Races', name);
@@ -84,7 +84,7 @@ async function findInCompendium(compendiumName, name) {
         SFHI.warn(`Exact match for '${name}' not found in compendium '${compendiumName}'. Using '${foundEntry.name}' (Levenshtein Distance = ${foundLevDistance}) instead.`);
     }
 
-    return foundEntry;
+    return { value: foundEntry, exact: foundLevDistance <= 0 };
 }
 
 function fuzzyEquals(a, b, distanceThreshold) {
