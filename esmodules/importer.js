@@ -3,6 +3,10 @@ import { parseEffect } from './effect-parser.js';
 import { HephaistosMissingItemsDialog } from './missing-items-dialog.js';
 
 export async function importJson(data) {
+    if (!data?.version?.minor && !data?.version?.major) {
+        throw new Error("Incorrect data format. Please ensure that you are using the JSON file download from the Hephaistos website.");
+    }
+
     let items = [];
     let notFound = [];
 
@@ -211,7 +215,7 @@ export async function importJson(data) {
         if (!replacedItems) {
             return;
         }
-        
+
         for(const ri of replacedItems) {
             if (!ri.compendium) {
                 continue;
