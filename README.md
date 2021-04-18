@@ -25,13 +25,14 @@ This module is currently a work-in-progress. A summary of the work done, and rem
 - [ ] Classes
     - [x] Basic Import
     - [x] Spells Per Day
-    - [ ] Class Features
+    - [x] Class Features
+        - [ ] Class Feature Options
     - [ ] Archetypes
         - [ ] Basic Import
         - [ ] Class Features
-- [ ] Feats
+- [-] Feats
     - [x] Basic Import
-    - [ ] Feat Option
+    - [-] Feat Option
 - [ ] Equipment
     - [x] Basic Import
     - [x] Is Equipped/Installed

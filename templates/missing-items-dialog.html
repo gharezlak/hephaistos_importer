@@ -6,7 +6,10 @@
     </div>
     {{#each items as |item|}}
         <div class="form-group">
-            <label style="flex: 1; padding-right: 0.25rem;">{{item.name}}</label>
+            <div style="flex: 1; padding-right: 0.25rem;">
+                <label>{{item.name}}</label>
+                <div style="font-size: 0.75em;">{{item.subtitle}}</div>
+            </div>
             {{#if item.compendium}}
                 <input id="{{@index}}" style="flex: 1;" type="text" value="{{item.compendium.name}}"/>
             {{else}}

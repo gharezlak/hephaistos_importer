@@ -2,6 +2,7 @@ import * as SFHI from './log.js';
 
 const modifierMapping = [
     ['character.level', '@details.level.value'],
+    ['character.bab', '@details.baseAttackBonus.value'],
 ];
 
 const effectTypeMapping = [

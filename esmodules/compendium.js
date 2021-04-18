@@ -37,6 +37,10 @@ export async function findSpell(name) {
     return await findInCompendium('Spells', name);
 }
 
+export async function findClassFeature(feature) {
+    return await findInCompendium('Class Features', feature);
+}
+
 // An object to remember already calculated levenshtein distances
 let distances = {};
 
@@ -136,6 +140,7 @@ function processString(str) {
     return str.toLowerCase()
         .replace(' (magic)', '')
         .replace(' (hybrid)', '')
+        .replace(/ \(.*\)/i, '')
         .replace(',', '')
         .replace('.', '')
         .replace('!', '')

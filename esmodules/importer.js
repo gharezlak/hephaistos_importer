@@ -1,4 +1,4 @@
-import { findRace, findTheme, findClass, findFeat, findEquipment, findSpell } from './compendium.js';
+import { findRace, findTheme, findClass, findFeat, findEquipment, findSpell, findClassFeature } from './compendium.js';
 import { parseEffect } from './effect-parser.js';
 import { HephaistosMissingItemsDialog } from './missing-items-dialog.js';
 
@@ -12,10 +12,10 @@ export async function importJson(data) {
         if (race.exact) {
             items.push(race.value);
         } else {
-            notFound.push({name: data.race.name, compendium: race.value, find: (x) => findRace(x)});
+            notFound.push({name: data.race.name, subtitle: 'Race', compendium: race.value, find: (x) => findRace(x)});
         }
     } else if (data.race) {
-        notFound.push({name: data.race.name, find: (x) => findRace(x)});
+        notFound.push({name: data.race.name, subtitle: 'Race', find: (x) => findRace(x)});
     }
 
     // Import Theme
@@ -24,10 +24,10 @@ export async function importJson(data) {
         if (theme.exact) {
             items.push(theme.value);
         } else {
-            notFound.push({name: data.theme.name, compendium: theme.value, find: (x) => findTheme(x)});
+            notFound.push({name: data.theme.name, subtitle: 'Theme', compendium: theme.value, find: (x) => findTheme(x)});
         }
     } else if (data.theme) {
-        notFound.push({name: data.theme.name, find: (x) => findTheme(x)});
+        notFound.push({name: data.theme.name, subtitle: 'Theme', find: (x) => findTheme(x)});
     }
 
     // Import Classes
@@ -37,7 +37,6 @@ export async function importJson(data) {
         }
 
         const compendiumClass = await findClass(currentClass.name);
-        // TODO: Class features
         // TODO: Archetype
         if (compendiumClass?.exact) {
             await after(compendiumClass.value);
@@ -45,10 +44,26 @@ export async function importJson(data) {
         } else {
             notFound.push({
                 name: currentClass.name, 
+                subtitle: `Class`,
                 compendium: compendiumClass?.value,
                 find: (x) => findClass(x),
                 after: after,
             });
+        }
+
+        // Class features
+        for (const currentFeature of currentClass.features) {
+            const compendiumFeature = await findClassFeature(currentFeature.name);
+            if (compendiumFeature?.exact) {
+                items.push(compendiumFeature.value);
+            } else {
+                notFound.push({
+                    name: currentFeature.name, 
+                    subtitle: `Class Feature (${currentClass.name})`,
+                    compendium: compendiumFeature?.value,
+                    find: (x) => findClassFeature(x),
+                });
+            }
         }
     }
 
@@ -73,6 +88,7 @@ export async function importJson(data) {
         } else {
             notFound.push({
                 name: currentEquipment.name, 
+                subtitle: 'Equipment',
                 compendium: compendiumEquipment?.value,
                 find: (x) => findEquipment(x),
                 after: after,
@@ -103,6 +119,7 @@ export async function importJson(data) {
             } else {
                 notFound.push({
                     name: spell.name, 
+                    subtitle: 'Spell',
                     compendium: compendiumSpell?.value,
                     find: (x) => findSpell(x),
                     after: after,
@@ -176,6 +193,7 @@ export async function importJson(data) {
         } else {
             notFound.push({
                 name: currentFeat.name, 
+                subtitle: 'Feat',
                 compendium: compendiumFeat?.value,
                 find: (x) => findFeat(x),
                 after: after,
@@ -184,40 +202,42 @@ export async function importJson(data) {
     }
 
     if (notFound) {
-        try {
-            const uniqueNotFound = new Map();
-            for (const nf of notFound) {
-                uniqueNotFound.set(nf.name, nf);
+        const uniqueNotFound = new Map();
+        for (const nf of notFound) {
+            uniqueNotFound.set(nf.name, nf);
+        }
+
+        const replacedItems = await HephaistosMissingItemsDialog.createAndShow([...uniqueNotFound.values()]);
+        if (!replacedItems) {
+            return;
+        }
+        
+        for(const ri of replacedItems) {
+            if (!ri.compendium) {
+                continue;
             }
 
-            const replacedItems = await HephaistosMissingItemsDialog.createAndShow([...uniqueNotFound.values()]);
-            for(const ri of replacedItems) {
-                if (!ri.compendium) {
+            const repeats = notFound.reduce((n, x) => n + (x.name === ri.name), 0);
+            if (typeof ri.compendium === 'string') {
+                let found = await ri.find(ri.compendium);
+                if (!found) {
                     continue;
                 }
 
-                const repeats = notFound.reduce((n, x) => n + (x.name === ri.name), 0);
-                if (typeof ri.compendium === 'string') {
-                    let found = await ri.find(ri.compendium);
-                    if (!found) {
-                        continue;
+                for(let i = 0; i < repeats; i++) {
+                    if (ri.after) {
+                        await ri.after(found.value);
                     }
-
-                    for(let i = 0; i < repeats; i++) {
-                        if (ri.after) {
-                            await ri.after(found.value);
-                        }
-                        items.push(found.value);
-                    }
-                } else {
-                    for(let i = 0; i < repeats; i++) {
+                    items.push(found.value);
+                }
+            } else {
+                for(let i = 0; i < repeats; i++) {
+                    if (ri.after) {
                         await ri.after(ri.compendium);
-                        items.push(ri.compendium);
                     }
+                    items.push(ri.compendium);
                 }
             }
-        } catch {
-            return;
         }
     }
 

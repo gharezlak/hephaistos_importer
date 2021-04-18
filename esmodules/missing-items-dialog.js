@@ -30,7 +30,7 @@ export class HephaistosMissingItemsDialog extends Dialog {
                     cancel: {
                         icon: '<i class="fas fa-times"></i>',
                         label: 'Cancel',
-                        callback: () => reject(undefined),
+                        callback: () => resolve(undefined),
                     },
                 },
             });
