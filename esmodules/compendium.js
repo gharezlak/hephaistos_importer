@@ -6,11 +6,11 @@ export async function findRace(race, abilityAdjustment) {
     }
 
     let name = race.name;
-    if (abilityAdjustment && abilityAdjustment !== 'Standard') {
-        name += ' ' + abilityAdjustment;
+    if (abilityAdjustment && processString(abilityAdjustment, true).join(' ') !== 'standard') {
+        name += ' (' + abilityAdjustment + ')';
     }
 
-    return await findInCompendium('Races', name);
+    return await findInCompendium('Races', name, false);
 }
 
 export async function findTheme(name) {
@@ -44,7 +44,7 @@ export async function findClassFeature(feature) {
 // An object to remember already calculated levenshtein distances
 let distances = {};
 
-async function findInCompendium(compendiumName, name) {
+async function findInCompendium(compendiumName, name, ignoreBracketedContent = true) {
     if (!name) {
         return undefined;
     }
@@ -63,7 +63,7 @@ async function findInCompendium(compendiumName, name) {
     let foundLevDistance = MAX_LEVENSHTEIN_DISTANCE;
 
     for (const entry of compendium.index) {
-        const res = fuzzyEquals(entry.name, name, MAX_LEVENSHTEIN_DISTANCE);
+        const res = fuzzyEquals(entry.name, name, MAX_LEVENSHTEIN_DISTANCE, ignoreBracketedContent);
         
         if (res === 0) {
             foundEntryId = entry._id;
@@ -80,7 +80,7 @@ async function findInCompendium(compendiumName, name) {
 
     if (!foundEntryId) {
         SFHI.warn(`No item named '${name}' found in compendium '${compendiumName}'`);
-        return undefined;
+        return { query: name };
     }
 
     const foundEntry = await compendium.getEntry(foundEntryId);
@@ -88,14 +88,14 @@ async function findInCompendium(compendiumName, name) {
         SFHI.warn(`Exact match for '${name}' not found in compendium '${compendiumName}'. Using '${foundEntry.name}' (Levenshtein Distance = ${foundLevDistance}) instead.`);
     }
 
-    return { value: foundEntry, exact: foundLevDistance <= 0 };
+    return { query: name, value: foundEntry, exact: foundLevDistance <= 0 };
 }
 
-function fuzzyEquals(a, b, distanceThreshold) {
+function fuzzyEquals(a, b, distanceThreshold, ignoreBracketedContent) {
     // Remove punctuation, brackets and other such symbols and split the strings
     // into "words" using whitespace
-    const processedA = processString(a);
-    const processedB = processString(b);
+    const processedA = processString(a, ignoreBracketedContent);
+    const processedB = processString(b, ignoreBracketedContent);
     
     if (processedA === processedB) {
         return 0;
@@ -136,11 +136,12 @@ function fuzzyEquals(a, b, distanceThreshold) {
     return distance;
 }
 
-function processString(str) {
+function processString(str, removeBracketedContent) {
     return str.toLowerCase()
         .replace(' (magic)', '')
         .replace(' (hybrid)', '')
-        .replace(/ \(.*\)/i, '')
+        .replace('’', '\'')
+        .replace(removeBracketedContent ? / \(.*\)/i : '', '')
         .replace(',', '')
         .replace('.', '')
         .replace('!', '')

@@ -13,13 +13,29 @@ export async function importJson(data) {
     // Import Race
     const race = await findRace(data.race, data.race.abilityAdjustment.name);
     if (race) {
+        const after = (r) => {
+            // Special case handling of races like Humans, Half-orcs and Half-elves who
+            // can choose the ability score their racial bonus applies to.
+            if (data.race.abilityAdjustment?.name?.startsWith('Standard (')) {
+                r.data.abilityMods.parts = [];
+                for (const adj of data.race.abilityAdjustment.adjustment) {
+                    const split = adj.split(' ');
+                    const value = parseInt(split[0]);
+                    const ability = split[1];
+
+                    r.data.abilityMods.parts.push([value, ability]);
+                }
+            }
+        }
+
         if (race.exact) {
+            after(race.value);
             items.push(race.value);
         } else {
-            notFound.push({name: data.race.name, subtitle: 'Race', compendium: race.value, find: (x) => findRace(x)});
+            notFound.push({name: race.query, subtitle: 'Race', compendium: race.value, find: (x) => findRace(x), after: after});
         }
     } else if (data.race) {
-        notFound.push({name: data.race.name, subtitle: 'Race', find: (x) => findRace(x)});
+        notFound.push({name: race.query, subtitle: 'Race', find: (x) => findRace(x)});
     }
 
     // Import Theme
