@@ -72,17 +72,24 @@ export async function importJson(data) {
         }
 
         // Class features
+        const findAndAddClassFeature = async (cf) => {
+            const compendiumFeature = await findClassFeature(cf.name);
+                if (compendiumFeature?.exact) {
+                    items.push(compendiumFeature.value);
+                } else {
+                    notFound.push({
+                        name: cf.name, 
+                        subtitle: `Class Feature (${currentClass.name})`,
+                        compendium: compendiumFeature?.value,
+                        find: (x) => findClassFeature(x),
+                    });
+                }
+            }
+
         for (const currentFeature of currentClass.features) {
-            const compendiumFeature = await findClassFeature(currentFeature.name);
-            if (compendiumFeature?.exact) {
-                items.push(compendiumFeature.value);
-            } else {
-                notFound.push({
-                    name: currentFeature.name, 
-                    subtitle: `Class Feature (${currentClass.name})`,
-                    compendium: compendiumFeature?.value,
-                    find: (x) => findClassFeature(x),
-                });
+            await findAndAddClassFeature(currentFeature);
+            for (const opt of currentFeature.options) {
+                await findAndAddClassFeature(opt);
             }
         }
     }

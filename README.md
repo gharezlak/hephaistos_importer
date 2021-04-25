@@ -26,7 +26,7 @@ This module is currently a work-in-progress. A summary of the work done, and rem
     - [x] Basic Import
     - [x] Spells Per Day
     - [x] Class Features
-        - [ ] Class Feature Options
+        - [x] Class Feature Options
     - [ ] Archetypes
         - [ ] Basic Import
         - [ ] Class Features
