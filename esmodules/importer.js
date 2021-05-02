@@ -7,6 +7,18 @@ export async function importJson(data) {
         throw new Error("Incorrect data format. Please ensure that you are using the JSON file download from the Hephaistos website.");
     }
 
+    let character = await importCharacter(data);
+    if (data.drone) {
+        try {
+            await importDrone(data.drone);
+        } catch (e) {
+            await character.delete();
+            throw e;
+        }
+    }
+}
+
+async function importCharacter(data) {
     let items = [];
     let notFound = [];
 
@@ -35,7 +47,7 @@ export async function importJson(data) {
             notFound.push({name: race.query, subtitle: 'Race', compendium: race.value, find: (x) => findRace(x), after: after});
         }
     } else if (data.race) {
-        notFound.push({name: race.query, subtitle: 'Race', find: (x) => findRace(x)});
+        notFound.push({name: race.query, subtitle: 'Race', find: (x) => findRace(x), after: after});
     }
 
     // Import Theme
@@ -72,56 +84,23 @@ export async function importJson(data) {
         }
 
         // Class features
-        const findAndAddClassFeature = async (cf) => {
-            const compendiumFeature = await findClassFeature(cf.name);
-                if (compendiumFeature?.exact) {
-                    items.push(compendiumFeature.value);
-                } else {
-                    notFound.push({
-                        name: cf.name, 
-                        subtitle: `Class Feature (${currentClass.name})`,
-                        compendium: compendiumFeature?.value,
-                        find: (x) => findClassFeature(x),
-                    });
-                }
-            }
-
         for (const currentFeature of currentClass.features) {
-            await findAndAddClassFeature(currentFeature);
+            let featureResult = await importClassFeature(currentClass.name, currentFeature);
+            items.push(...featureResult.items);
+            notFound.push(...featureResult.notFound);
+
             for (const opt of currentFeature.options) {
-                await findAndAddClassFeature(opt);
+                let optionResult = await importClassFeature(currentClass.name, opt);
+                items.push(...optionResult.items);
+                notFound.push(...optionResult.notFound);
             }
         }
     }
 
     // Import Equipment
-    for (const currentEquipment of data.inventory) {
-        const after = async (x) => {
-            x.data.equipped = currentEquipment.isEquipped;
-
-            if (x?.data?.container?.contents) {
-                x.data.container.contents = [];
-                await addEnhancements(x, currentEquipment.fusionIds, data.inventory);
-                await addEnhancements(x, currentEquipment.accessoryIds, data.inventory);
-                await addEnhancements(x, currentEquipment.upgradeIds, data.inventory);
-            }
-        };
-
-        // TODO: Item option selection
-        const compendiumEquipment = await findEquipment(currentEquipment.name);
-        if (compendiumEquipment?.exact) {
-            await after(compendiumEquipment.value);
-            items.push(compendiumEquipment.value);
-        } else {
-            notFound.push({
-                name: currentEquipment.name, 
-                subtitle: 'Equipment',
-                compendium: compendiumEquipment?.value,
-                find: (x) => findEquipment(x),
-                after: after,
-            });
-        }
-    }
+    let equipmentResult = await importEquipment(data.inventory);
+    items.push(...equipmentResult.items);
+    notFound.push(...equipmentResult.notFound);
 
     // Import Spells
     for (const currentClass of data.classes) {
@@ -157,7 +136,7 @@ export async function importJson(data) {
 
     // TODO: Afflictions
 
-    let actorData = {
+    let characterData = {
         name: data.name,
         type: 'character',
         data: {
@@ -180,96 +159,18 @@ export async function importJson(data) {
     };
 
     // Import Feats
-    for (const currentFeat of data.feats.acquiredFeats) {
-        const parseEffects = async (name, effects) => {
-            let mod = [];
-            for (const e of effects) {
-                let res = await parseEffect(actorData, name, e);
-                if (res) {
-                    mod.push(res);
-                }
-            }
+    let featResult = await importFeats(data.feats.acquiredFeats, characterData);
+    items.push(...featResult.items);
+    notFound.push(...featResult.notFound);
 
-            return mod;
-        };
-
-        const after = async (x) => {
-            let modifiers = []
-            if (currentFeat.benefitEffect) {
-                let mods = await parseEffects(currentFeat.name, currentFeat.benefitEffect);
-                modifiers.push(...mods);
-            }
-
-            if (currentFeat.selectedOptions) {
-                for (const so of currentFeat.selectedOptions) {
-                    if (so.effect) {
-                        let mods = await parseEffects(`${currentFeat.name} (${so.name})`, so.effect);
-                        modifiers.push(...mods);
-                    }
-                }
-            }
-
-            x.data.modifiers = modifiers;
-        };
-
-        // TODO: Feat option selection
-        const compendiumFeat = await findFeat(currentFeat.name, currentFeat.isCombatFeat);
-        if (compendiumFeat?.exact) {
-            await after(compendiumFeat.value);
-            items.push(compendiumFeat.value);
-        } else {
-            notFound.push({
-                name: currentFeat.name, 
-                subtitle: 'Feat',
-                compendium: compendiumFeat?.value,
-                find: (x) => findFeat(x),
-                after: after,
-            });
-        }
-    }
-
+    // Deal with the items that weren't found
     if (notFound) {
-        const uniqueNotFound = new Map();
-        for (const nf of notFound) {
-            uniqueNotFound.set(nf.name, nf);
-        }
-
-        const replacedItems = await HephaistosMissingItemsDialog.createAndShow([...uniqueNotFound.values()]);
-        if (!replacedItems) {
-            return;
-        }
-
-        for(const ri of replacedItems) {
-            if (!ri.compendium) {
-                continue;
-            }
-
-            const repeats = notFound.reduce((n, x) => n + (x.name === ri.name), 0);
-            if (typeof ri.compendium === 'string') {
-                let found = await ri.find(ri.compendium);
-                if (!found) {
-                    continue;
-                }
-
-                for(let i = 0; i < repeats; i++) {
-                    if (ri.after) {
-                        await ri.after(found.value);
-                    }
-                    items.push(found.value);
-                }
-            } else {
-                for(let i = 0; i < repeats; i++) {
-                    if (ri.after) {
-                        await ri.after(ri.compendium);
-                    }
-                    items.push(ri.compendium);
-                }
-            }
-        }
+        let resolved = await resolveNotFound(notFound);
+        items.push(...resolved);
     }
 
     // Create Actor
-    let actor = await Actor.create(actorData);
+    let actor = await Actor.create(characterData);
 
     for (const i of items) {
         i['_id'] = undefined;
@@ -277,6 +178,135 @@ export async function importJson(data) {
     }
     
     await addAbilityIncreases(actor, data.abilityScores.increases);
+    return actor;
+}
+
+async function importDrone(data) {
+    let items = [];
+    let notFound = [];
+
+    // Import Race
+    if (data.chassis) {
+        const chassis = await findClassFeature(data.chassis.name);
+        if (chassis) {
+            const after = (c) => {
+                c.data.levels = data.level;
+            }
+    
+            if (chassis.exact) {
+                after(chassis.value);
+                items.push(chassis.value);
+            } else {
+                notFound.push({name: chassis.query, subtitle: 'Drone Chassis', compendium: chassis.value, find: (x) => findClassFeature(x), after: after});
+            }
+        } else if (data.race) {
+            notFound.push({name: chassis.query, subtitle: 'Drone Chassis', find: (x) => findClassFeature(x), after: after});
+        }
+    }
+    
+    // Import Special Abilities
+    for (const ability of data.specialAbilities) {
+        let abilityResult = await importClassFeature('Drone Special Ability', ability);
+        items.push(...abilityResult.items);
+        notFound.push(...abilityResult.notFound);
+    }
+
+    // Import Drone Mods
+    for (const mod of data.mods.installedMods) {
+        let modResult = await importClassFeature('Drone Mod', mod);
+        items.push(...modResult.items);
+        notFound.push(...modResult.notFound);
+    }
+
+    // Import Equipment
+    let equipmentResult = await importEquipment(data.inventory);
+    items.push(...equipmentResult.items);
+    notFound.push(...equipmentResult.notFound);
+
+    let droneData = {
+        name: data.name,
+        type: 'drone',
+        data: {
+            abilities: importAbilities(data.abilityScores),
+            skills: importSkills(data.skills),
+            conditions: importConditions(data.conditions),
+            currency: {
+                credit: data.credits,
+            },
+            traits: {
+                size: data.chassis?.size.toLowerCase(),
+
+            },
+            attributes: {
+                speed: importSpeed(data.speed),
+            },
+        },
+    };
+
+    // Import Feats
+    let featResult = await importFeats(data.feats.acquiredFeats, droneData);
+    items.push(...featResult.items);
+    notFound.push(...featResult.notFound);
+    
+    // Deal with the items that weren't found
+    if (notFound) {
+        let resolved = await resolveNotFound(notFound);
+        items.push(...resolved);
+    }
+
+    // Create Actor
+    let actor = await Actor.create(droneData);
+
+    for (const i of items) {
+        i['_id'] = undefined;
+        await actor.createOwnedItem(i);
+    }
+    
+    return actor;
+}
+
+async function resolveNotFound(notFound) {
+    let items = [];
+
+    const uniqueNotFound = new Map();
+    for (const nf of notFound) {
+        uniqueNotFound.set(nf.name, nf);
+    }
+
+    const replacedItems = await HephaistosMissingItemsDialog.createAndShow([...uniqueNotFound.values()]);
+    if (!replacedItems) {
+        return;
+    }
+
+    for(const ri of replacedItems) {
+        if (!ri.compendium) {
+            continue;
+        }
+
+        const repeats = notFound.reduce((n, x) => n + (x.name === ri.name), 0);
+        if (typeof ri.compendium === 'string') {
+            let found = await ri.find(ri.compendium);
+            if (!found) {
+                continue;
+            }
+
+            for(let i = 0; i < repeats; i++) {
+                if (ri.after) {
+                    await ri.after(found.value);
+                }
+                items.push(found.value);
+            }
+        } else {
+            for(let i = 0; i < repeats; i++) {
+                if (ri.after) {
+                    await ri.after(ri.compendium);
+                }
+                items.push(ri.compendium);
+            }
+        }
+    }
+
+    return items;
 }
 
 function importAbilities(abilityScores) {
@@ -530,4 +560,113 @@ async function addEnhancements(equipment, enhancementIds, inventory) {
         }
     }
 
+}
+
+async function importEquipment(inventory) {
+    let items = [];
+    let notFound = [];
+
+    for (const currentEquipment of inventory) {
+        const after = async (x) => {
+            x.data.equipped = currentEquipment.isEquipped;
+
+            if (x?.data?.container?.contents) {
+                x.data.container.contents = [];
+                await addEnhancements(x, currentEquipment.fusionIds, inventory);
+                await addEnhancements(x, currentEquipment.accessoryIds, inventory);
+                await addEnhancements(x, currentEquipment.upgradeIds, inventory);
+            }
+        };
+
+        // TODO: Item option selection
+        const compendiumEquipment = await findEquipment(currentEquipment.name);
+        if (compendiumEquipment?.exact) {
+            await after(compendiumEquipment.value);
+            items.push(compendiumEquipment.value);
+        } else {
+            notFound.push({
+                name: currentEquipment.name, 
+                subtitle: 'Equipment',
+                compendium: compendiumEquipment?.value,
+                find: (x) => findEquipment(x),
+                after: after,
+            });
+        }
+    }
+
+    return {items: items, notFound: notFound};
+}
+
+async function importFeats(feats, actorData) {
+    let items = [];
+    let notFound = [];
+
+    for (const currentFeat of feats) {
+        const parseEffects = async (name, effects) => {
+            let mod = [];
+            for (const e of effects) {
+                let res = await parseEffect(actorData, name, e);
+                if (res) {
+                    mod.push(res);
+                }
+            }
+
+            return mod;
+        };
+
+        const after = async (x) => {
+            let modifiers = []
+            if (currentFeat.benefitEffect) {
+                let mods = await parseEffects(currentFeat.name, currentFeat.benefitEffect);
+                modifiers.push(...mods);
+            }
+
+            if (currentFeat.selectedOptions) {
+                for (const so of currentFeat.selectedOptions) {
+                    if (so.effect) {
+                        let mods = await parseEffects(`${currentFeat.name} (${so.name})`, so.effect);
+                        modifiers.push(...mods);
+                    }
+                }
+            }
+
+            x.data.modifiers = modifiers;
+        };
+
+        // TODO: Feat option selection
+        const compendiumFeat = await findFeat(currentFeat.name, currentFeat.isCombatFeat);
+        if (compendiumFeat?.exact) {
+            await after(compendiumFeat.value);
+            items.push(compendiumFeat.value);
+        } else {
+            notFound.push({
+                name: currentFeat.name, 
+                subtitle: 'Feat',
+                compendium: compendiumFeat?.value,
+                find: (x) => findFeat(x),
+                after: after,
+            });
+        }
+    }
+
+    return {items: items, notFound: notFound};
+}
+
+async function importClassFeature(subtitle, classFeature) {
+    let items = [];
+    let notFound = [];
+
+    const compendiumFeature = await findClassFeature(classFeature.name);
+    if (compendiumFeature?.exact) {
+        items.push(compendiumFeature.value);
+    } else {
+        notFound.push({
+            name: classFeature.name, 
+            subtitle: `Class Feature (${subtitle})`,
+            compendium: compendiumFeature?.value,
+            find: (x) => findClassFeature(x),
+        });
+    }
+    
+    return {items: items, notFound: notFound};
 }

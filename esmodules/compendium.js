@@ -142,6 +142,7 @@ function processString(str, removeBracketedContent) {
         .replace(' (hybrid)', '')
         .replace('’', '\'')
         .replace(removeBracketedContent ? / \(.*\)/i : '', '')
+        .replace(removeBracketedContent ? / \[.*\]/i : '', '')
         .replace(',', '')
         .replace('.', '')
         .replace('!', '')

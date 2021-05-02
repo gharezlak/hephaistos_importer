@@ -33,7 +33,7 @@ This module is currently a work-in-progress. A summary of the work done, and rem
 - [-] Feats
     - [x] Basic Import
     - [-] Feat Option
-- [ ] Equipment
+- [-] Equipment
     - [x] Basic Import
     - [x] Is Equipped/Installed
     - [x] Enhancements
@@ -45,3 +45,12 @@ This module is currently a work-in-progress. A summary of the work done, and rem
 - [x] Conditions
     - [ ] Negative Levels
 - [ ] Afflictions
+- [ ] Drones
+    - [x] Stats
+    - [x] Chassis
+    - [ ] Mods
+        - [x] Basic Import
+        - [ ] Skill Unit
+    - [x] Equipment
+    - [x] Feats
+- [ ] Starships
