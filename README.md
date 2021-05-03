@@ -30,10 +30,10 @@ This module is currently a work-in-progress. A summary of the work done, and rem
     - [ ] Archetypes
         - [ ] Basic Import
         - [ ] Class Features
-- [-] Feats
+- [ ] Feats
     - [x] Basic Import
-    - [-] Feat Option
-- [-] Equipment
+    - [x] Feat Option (only for some feats)
+- [ ] Equipment
     - [x] Basic Import
     - [x] Is Equipped/Installed
     - [x] Enhancements
