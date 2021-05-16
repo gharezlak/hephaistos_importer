@@ -1,4 +1,4 @@
-import { findRace, findTheme, findClass, findFeat, findEquipment, findSpell, findClassFeature } from './compendium.js';
+import { findRace, findTheme, findClass, findFeat, findEquipment, findSpell, findClassFeature, findStarshipComponent } from './compendium.js';
 import { parseEffect } from './effect-parser.js';
 import { HephaistosMissingItemsDialog } from './missing-items-dialog.js';
 
@@ -7,14 +7,116 @@ export async function importJson(data) {
         throw new Error("Incorrect data format. Please ensure that you are using the JSON file download from the Hephaistos website.");
     }
 
-    let character = await importCharacter(data);
-    if (data.drone) {
-        try {
-            await importDrone(data.drone);
-        } catch (e) {
-            await character.delete();
-            throw e;
+    if (data.type === 'starship') {
+        await importStarship(data);
+    } else {
+        let character = await importCharacter(data);
+        if (data.drone) {
+            try {
+                await importDrone(data.drone);
+            } catch (e) {
+                await character.delete();
+                throw e;
+            }
         }
+    }
+}
+
+async function importStarship(data) {
+    let items = [];
+    let notFound = [];
+
+    const findComponent = async (name, subtitle, after) => {
+        if (!name) {
+            return;
+        }
+
+        const res = await findStarshipComponent(name);
+
+        if (res?.exact) {
+            if (after) {
+                await after(res.value);
+            }
+
+            items.push(res.value);
+        } else {
+            notFound.push({
+                name: name, 
+                subtitle: subtitle,
+                compendium: res?.value,
+                find: (x) => findStarshipComponent(x),
+                after: after,
+            });
+        }
+    };
+
+    await findComponent(data.baseFrame?.name, 'Base Frame');
+    for (const pc of data.powerCores) {
+        await findComponent(pc.name, 'Power Core');
+    }
+    await findComponent(data.thruster?.name, 'Thruster');
+    await findComponent(data.armor?.name, 'Armor');
+    await findComponent(data.ablativeArmor?.name, 'Ablative Armor');
+    await findComponent(data.fortifiedHull?.name, 'Fortified Hull');
+    await findComponent(data.reinforcedBulkhead?.name, 'Reinforced Bulkhead');
+    await findComponent(data.shield?.name, 'Shield');
+    await findComponent(data.computer?.name, 'Computer');
+    await findComponent(data.crewQuarter?.name, 'Crew Quarter');
+    await findComponent(data.defensiveCountermeasure?.name, 'Defensive Countermeasure');
+    await findComponent(data.interstellarDrive?.name, 'Interstellar Drive');
+    await findComponent(data.sensor?.name, 'Sensor');
+    for (const eb of data.expansionBays) {
+        await findComponent(eb.name, 'Expansion Bay');
+    }
+    for (const w of data.weapons) {
+        const after = (weapon) => {
+            if (w.installedArc) {
+                weapon.data.mount = {
+                    mounted: true,
+                    arc: w.installedArc.toLowerCase(),
+                }
+            }
+        };
+
+        await findComponent(w.name, 'Weapon', after);
+    }
+    
+    // Deal with the items that weren't found
+    if (notFound.length !== 0) {
+        let resolved = await resolveNotFound(notFound);
+        if (resolved) {
+            items.push(...resolved);
+        }
+    }
+
+    let starshipData = {
+        name: data.name,
+        type: 'starship',
+        data: {
+            details: {
+                tier: data.tier,
+            },
+            attributes: {
+                systems: {
+                    weaponsArrayForward: importStarshipSystem(data.arcs?.forward?.condition),
+                    weaponsArrayPort: importStarshipSystem(data.arcs?.port?.condition),
+                    weaponsArrayStarboard: importStarshipSystem(data.arcs?.starboard?.condition),
+                    weaponsArrayAft: importStarshipSystem(data.arcs?.aft?.condition),
+                    lifeSupport: importStarshipSystem(data.condition?.lifeSupport),
+                    sensors: importStarshipSystem(data.condition?.sensors),
+                    engines: importStarshipSystem(data.condition?.engines),
+                    powerCore: importStarshipSystem(data.condition?.powerCore),
+                },
+            }
+        },
+    };
+
+    // Create Actor
+    let actor = await Actor.create(starshipData);
+
+    for (const i of items) {
+        i['_id'] = undefined;
+        await actor.createOwnedItem(i);
     }
 }
 
@@ -135,7 +237,6 @@ async function importCharacter(data) {
     }
 
     // TODO: Afflictions
-
     let characterData = {
         name: data.name,
         type: 'character',
@@ -149,7 +250,6 @@ async function importCharacter(data) {
             },
             traits: {
                 size: data.race?.size.toLowerCase(),
-
             },
             attributes: {
                 keyability: calculateKeyAbility(data.classes),
@@ -164,9 +264,11 @@ async function importCharacter(data) {
     notFound.push(...featResult.notFound);
 
     // Deal with the items that weren't found
-    if (notFound) {
+    if (notFound.length !== 0) {
         let resolved = await resolveNotFound(notFound);
-        items.push(...resolved);
+        if (resolved) {
+            items.push(...resolved);
+        }
     }
 
     // Create Actor
@@ -249,9 +351,11 @@ async function importDrone(data) {
     notFound.push(...featResult.notFound);
     
     // Deal with the items that weren't found
-    if (notFound) {
+    if (notFound.length !== 0) {
         let resolved = await resolveNotFound(notFound);
-        items.push(...resolved);
+        if (resolved) {
+            items.push(...resolved);
+        }
     }
 
     // Create Actor
@@ -307,6 +411,16 @@ async function resolveNotFound(notFound) {
     }
 
     return items;
+}
+
+function importStarshipSystem(condition) {
+    if (!condition || condition === 'Normal') {
+        return undefined;
+    }
+
+    return {
+        value: condition.toLowerCase(),
+    };
 }
 
 function importAbilities(abilityScores) {

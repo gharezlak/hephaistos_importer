@@ -41,6 +41,10 @@ export async function findClassFeature(feature) {
     return await findInCompendium('Class Features', feature);
 }
 
+export async function findStarshipComponent(name) {
+    return await findInCompendium('Starship Components', name);
+}
+
 // An object to remember already calculated levenshtein distances
 let distances = {};
 
