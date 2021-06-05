@@ -154,14 +154,36 @@ async function importCharacter(data) {
 
     // Import Theme
     const theme = await findTheme(data.theme?.name);
+    const themeAfter = (t) => {
+        if (!data.theme) {
+            return;
+        }
+
+        const knowledgeOptions = data.theme?.benefits
+            .filter(b => b.name.includes("Theme Knowledge") || b.name.includes("General Knowledge"))
+            .map(b => b.selectedOptions)
+            .filter(x => !!x)
+            .flat();
+
+        const ability = knowledgeOptions.map(o => abilityFromString(o.name)).filter(x => !!x)?.[0];
+        if (ability) {
+            t.data.abilityMod.ability = ability;
+        }
+
+        const skill = knowledgeOptions.map(o => skillFromString(o.name)).filter(x => !!x)?.[0];
+        if (skill) {
+            t.data.skill = skill;
+        }
+    };
     if (theme) {
         if (theme.exact) {
+            themeAfter(theme.value);
             items.push(theme.value);
         } else {
-            notFound.push({name: data.theme.name, subtitle: 'Theme', compendium: theme.value, find: (x) => findTheme(x)});
+            notFound.push({name: data.theme.name, subtitle: 'Theme', compendium: theme.value, find: (x) => findTheme(x), after: (t) => themeAfter(t)});
         }
     } else if (data.theme) {
-        notFound.push({name: data.theme.name, subtitle: 'Theme', find: (x) => findTheme(x)});
+        notFound.push({name: data.theme.name, subtitle: 'Theme', find: (x) => findTheme(x), after: (t) => themeAfter(t)});
     }
 
     // Import Classes
@@ -432,6 +454,97 @@ function importAbilities(abilityScores) {
         wis: importAbility(abilityScores.wisdom),
         cha: importAbility(abilityScores.charisma),
     }
+}
+
+function abilityFromString(str) {
+    if (!str) {
+        return undefined;
+    }
+
+    if (str.toLowerCase().includes("strength")) {
+        return "str";
+    } else if (str.toLowerCase().includes("dexterity")) {
+        return "dex";
+    } else if (str.toLowerCase().includes("constitution")) {
+        return "con";
+    } else if (str.toLowerCase().includes("intelligence")) {
+        return "int";
+    } else if (str.toLowerCase().includes("wisdom")) {
+        return "wis";
+    } else if (str.toLowerCase().includes("charisma")) {
+        return "cha";
+    }
+
+    return undefined;
+}
+
+function skillFromString(str) {
+    if (!str) {
+        return undefined;
+    }
+
+    if (str.toLowerCase().includes("athletics")) {
+        return "ath";
+    }
+    else if (str.toLowerCase().includes("acrobatics")) {
+        return "acr";
+    }
+    else if (str.toLowerCase().includes("bluff")) {
+        return "blu";
+    }
+    else if (str.toLowerCase().includes("computers")) {
+        return "com";
+    }
+    else if (str.toLowerCase().includes("culture")) {
+        return "cul";
+    }
+    else if (str.toLowerCase().includes("diplomacy")) {
+        return "dip";
+    }
+    else if (str.toLowerCase().includes("disguise")) {
+        return "dis";
+    }
+    else if (str.toLowerCase().includes("engineering")) {
+        return "eng";
+    }
+    else if (str.toLowerCase().includes("intimidate")) {
+        return "int";
+    }
+    else if (str.toLowerCase().includes("life Science")) {
+        return "lsc";
+    }
+    else if (str.toLowerCase().includes("medicine")) {
+        return "med";
+    }
+    else if (str.toLowerCase().includes("mysticism")) {
+        return "mys";
+    }
+    else if (str.toLowerCase().includes("perception")) {
+        return "per";
+    }
+    else if (str.toLowerCase().includes("physical Science")) {
+        return "phs";
+    }
+    else if (str.toLowerCase().includes("piloting")) {
+        return "pil";
+    }
+    else if (str.toLowerCase().includes("profession")) {
+        return "pro";
+    }
+    else if (str.toLowerCase().includes("sense motive")) {
+        return "sen";
+    }
+    else if (str.toLowerCase().includes("sleight of hand")) {
+        return "sle";
+    }
+    else if (str.toLowerCase().includes("stealth")) {
+        return "ste";
+    }
+    else if (str.toLowerCase().includes("survival")) {
+        return "sur";
+    }
+    
+    return undefined;
 }
 
 function importSpeed(speed) {
