@@ -490,6 +490,8 @@ function importAbility(ability) {
     let base = 10;
     if (ability.base) {
         base = ability.base;
+    } else if (ability.override) {
+        base = ability.override - ability.scoreBonuses?.map(sb => sb.value).reduce((p, c) => p + c, 0);
     } else {
         base += ability.pointBuy;
     }
