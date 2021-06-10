@@ -3,7 +3,7 @@ import { importJson } from './importer.js';
 import * as SFHI from './log.js';
 
 function addImportButton() {
-    if (!Actor.can(game.user, 'create')) {
+    if (!game.user.isGM && !Actor.can(game.user, "create")) {
         return;
     }
 

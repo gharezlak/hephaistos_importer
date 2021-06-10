@@ -69,13 +69,13 @@ async function importStarship(data) {
         await findComponent(eb.name, 'Expansion Bay');
     }
     for (const w of data.weapons) {
-        const after = (weapon) => {
+        const after = async (weapon) => {
             if (w.installedArc) {
-                weapon.data.mount = {
+                await weapon.update({"data.mount": {
                     mounted: true,
                     arc: w.installedArc.toLowerCase(),
-                }
-            }
+                }});
+            };
         };
 
         await findComponent(w.name, 'Weapon', after);
@@ -113,11 +113,7 @@ async function importStarship(data) {
 
     // Create Actor
     let actor = await Actor.create(starshipData);
-
-    for (const i of items) {
-        i['_id'] = undefined;
-        await actor.createOwnedItem(i);
-    }
+    await actor.createEmbeddedDocuments("Item", items);
 }
 
 async function importCharacter(data) {
@@ -125,25 +121,27 @@ async function importCharacter(data) {
     let notFound = [];
 
     // Import Race
-    const race = await findRace(data.race, data.race.abilityAdjustment.name);
+    const race = await findRace(data.race, data.race?.abilityAdjustment.name);
     if (race) {
-        const after = (r) => {
+        const after = async (r) => {
             // Special case handling of races like Humans, Half-orcs and Half-elves who
             // can choose the ability score their racial bonus applies to.
             if (data.race.abilityAdjustment?.name?.startsWith('Standard (')) {
-                r.data.abilityMods.parts = [];
+                let parts = [];
                 for (const adj of data.race.abilityAdjustment.adjustment) {
                     const split = adj.split(' ');
                     const value = parseInt(split[0]);
                     const ability = split[1];
 
-                    r.data.abilityMods.parts.push([value, ability]);
+                    parts.push([value, ability]);
                 }
+
+                await r.update({"data.abilityMods.parts": parts});
             }
         }
 
         if (race.exact) {
-            after(race.value);
+            await after(race.value);
             items.push(race.value);
         } else {
             notFound.push({name: race.query, subtitle: 'Race', compendium: race.value, find: (x) => findRace(x), after: after});
@@ -154,7 +152,7 @@ async function importCharacter(data) {
 
     // Import Theme
     const theme = await findTheme(data.theme?.name);
-    const themeAfter = (t) => {
+    const themeAfter = async (t) => {
         if (!data.theme) {
             return;
         }
@@ -167,17 +165,17 @@ async function importCharacter(data) {
 
         const ability = knowledgeOptions.map(o => abilityFromString(o.name)).filter(x => !!x)?.[0];
         if (ability) {
-            t.data.abilityMod.ability = ability;
+            await t.update({"data.abilityMod.ability": ability});
         }
 
         const skill = knowledgeOptions.map(o => skillFromString(o.name)).filter(x => !!x)?.[0];
         if (skill) {
-            t.data.skill = skill;
+            await t.update({"data.skill": skill});
         }
     };
     if (theme) {
         if (theme.exact) {
-            themeAfter(theme.value);
+            await themeAfter(theme.value);
             items.push(theme.value);
         } else {
             notFound.push({name: data.theme.name, subtitle: 'Theme', compendium: theme.value, find: (x) => findTheme(x), after: (t) => themeAfter(t)});
@@ -189,7 +187,7 @@ async function importCharacter(data) {
     // Import Classes
     for (const currentClass of data.classes) {
         const after = async (x) =>  {
-            x.data.levels = currentClass.levels;
+            await x.update({"data.levels": currentClass.levels});
         }
 
         const compendiumClass = await findClass(currentClass.name);
@@ -240,7 +238,7 @@ async function importCharacter(data) {
             if (spellLevel === undefined && spell.level) {
                 spellLevel = spell.level[0].level;
             }
-            const after = async (x) => x.data.level = spellLevel;
+            const after = async (x) => { await x.update({"data.level": spellLevel}); };
 
             const compendiumSpell = await findSpell(spell.name);
             if (compendiumSpell?.exact) {
@@ -295,11 +293,7 @@ async function importCharacter(data) {
 
     // Create Actor
     let actor = await Actor.create(characterData);
-
-    for (const i of items) {
-        i['_id'] = undefined;
-        await actor.createOwnedItem(i);
-    }
+    await actor.createEmbeddedDocuments("Item", items);
     
     await addAbilityIncreases(actor, data.abilityScores.increases);
     return actor;
@@ -313,12 +307,12 @@ async function importDrone(data) {
     if (data.chassis) {
         const chassis = await findClassFeature(data.chassis.name);
         if (chassis) {
-            const after = (c) => {
-                c.data.levels = data.level;
+            const after = async (c) => {
+                await c.update({"data.levels": data.level});
             }
     
             if (chassis.exact) {
-                after(chassis.value);
+                await after(chassis.value);
                 items.push(chassis.value);
             } else {
                 notFound.push({name: chassis.query, subtitle: 'Drone Chassis', compendium: chassis.value, find: (x) => findClassFeature(x), after: after});
@@ -382,11 +376,7 @@ async function importDrone(data) {
 
     // Create Actor
     let actor = await Actor.create(droneData);
-
-    for (const i of items) {
-        i['_id'] = undefined;
-        await actor.createOwnedItem(i);
-    }
+    await actor.createEmbeddedDocuments("Item", items);
     
     return actor;
 }
@@ -437,7 +427,7 @@ async function resolveNotFound(notFound) {
 
 function importStarshipSystem(condition) {
     if (!condition || condition === 'Normal') {
-        return undefined;
+        return { value: 'nominal' };
     }
 
     return {
@@ -765,30 +755,31 @@ async function addAbilityIncreases(actor, increases) {
             }
         };
 
-        await actor.createOwnedItem({
+        await actor.createEmbeddedDocuments("Item", [{
             name: name,
             type: 'asi',
             data: data,
-        });
+        }]);
     }
 }
 
-async function addEnhancements(equipment, enhancementIds, inventory) {
+async function addEnhancements(enhancementIds, inventory) {
     if (!enhancementIds) {
-        return;
+        return [];
     }
 
     const dataEnhancements = inventory.filter(e => enhancementIds.some(f => f === e.id));
+    let enhancement = [];
     for(const fusion of dataEnhancements) {
         const compendiumEnhancement = await findEquipment(fusion.name);
         if (compendiumEnhancement) {
-            equipment.data.container.contents.push({
+            enhancement.push({
                 id: compendiumEnhancement._id,
                 index: 0,
             });
         }
     }
-
+    return enhancement;
 }
 
 async function importEquipment(inventory) {
@@ -797,14 +788,13 @@ async function importEquipment(inventory) {
 
     for (const currentEquipment of inventory) {
         const after = async (x) => {
-            x.data.equipped = currentEquipment.isEquipped;
+            await x.update({"data.equipped": currentEquipment.isEquipped});
 
-            if (x?.data?.container?.contents) {
-                x.data.container.contents = [];
-                await addEnhancements(x, currentEquipment.fusionIds, inventory);
-                await addEnhancements(x, currentEquipment.accessoryIds, inventory);
-                await addEnhancements(x, currentEquipment.upgradeIds, inventory);
-            }
+            let contents = [];
+            contents.push(...await addEnhancements(currentEquipment.fusionIds, inventory));
+            contents.push(...await addEnhancements(currentEquipment.accessoryIds, inventory));
+            contents.push(...await addEnhancements(currentEquipment.upgradeIds, inventory));
+            await x.update({"data.container.contents": contents});
         };
 
         // TODO: Item option selection
@@ -830,7 +820,7 @@ async function importFeats(feats, actorData) {
     let items = [];
     let notFound = [];
 
-    for (const currentFeat of feats) {
+    const after = async (feat, x) => {
         const parseEffects = async (name, effects) => {
             let mod = [];
             for (const e of effects) {
@@ -843,29 +833,31 @@ async function importFeats(feats, actorData) {
             return mod;
         };
 
-        const after = async (x) => {
-            let modifiers = []
-            if (currentFeat.benefitEffect) {
-                let mods = await parseEffects(currentFeat.name, currentFeat.benefitEffect);
-                modifiers.push(...mods);
-            }
+        let modifiers = []
+        if (feat.benefitEffect) {
+            let mods = await parseEffects(feat.name, feat.benefitEffect);
+            modifiers.push(...mods);
+        }
 
-            if (currentFeat.selectedOptions) {
-                for (const so of currentFeat.selectedOptions) {
-                    if (so.effect) {
-                        let mods = await parseEffects(`${currentFeat.name} (${so.name})`, so.effect);
-                        modifiers.push(...mods);
-                    }
+        if (feat.selectedOptions) {
+            for (const so of feat.selectedOptions) {
+                if (so.effect) {
+                    let mods = await parseEffects(`${feat.name} (${so.name})`, so.effect);
+                    modifiers.push(...mods);
                 }
             }
+        }
 
-            x.data.modifiers = modifiers;
-        };
-
+        if (modifiers.length > 0) {
+            await x.update({"data.modifiers": modifiers});
+        }
+    };
+    
+    for (const currentFeat of feats) {
         // TODO: Feat option selection
         const compendiumFeat = await findFeat(currentFeat.name, currentFeat.isCombatFeat);
         if (compendiumFeat?.exact) {
-            await after(compendiumFeat.value);
+            await after(currentFeat, compendiumFeat.value);
             items.push(compendiumFeat.value);
         } else {
             notFound.push({
@@ -873,11 +865,11 @@ async function importFeats(feats, actorData) {
                 subtitle: 'Feat',
                 compendium: compendiumFeat?.value,
                 find: (x) => findFeat(x),
-                after: after,
+                after: async (x) => await after(currentFeat, x),
             });
         }
     }
-
+    
     return {items: items, notFound: notFound};
 }
 

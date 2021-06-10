@@ -105,7 +105,7 @@ function parseBonus(source, bonus) {
     }
 
     if (!mod) {
-        SFHI.error(`Failed to parse bonus from '${source}': ${JSON.stringify(bonus)}`);
+        SFHI.warn(`Failed to parse bonus from '${source}': ${JSON.stringify(bonus)}`);
         return undefined;
     }
 
@@ -139,6 +139,16 @@ function parseBonus(source, bonus) {
 
     const effectType = convert(effectTypeMapping, bonus.property);
     const valueAffected = convert(valueAffectedMapping, bonus.property);
+    
+    if (!effectType) {
+        SFHI.warn(`Failed to parse effectType from '${source}': ${JSON.stringify(bonus)}`);
+        return undefined;
+    }
+
+    if (!valueAffected) {
+        SFHI.warn(`Failed to parse valueAffected from '${source}': ${JSON.stringify(bonus)}`);
+        return undefined;
+    }
 
     return {
         name: source,

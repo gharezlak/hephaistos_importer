@@ -87,12 +87,12 @@ async function findInCompendium(compendiumName, name, ignoreBracketedContent = t
         return { query: name };
     }
 
-    const foundEntry = await compendium.getEntry(foundEntryId);
+    const foundEntry = await compendium.getDocument(foundEntryId);
     if (foundLevDistance > 0) {
         SFHI.warn(`Exact match for '${name}' not found in compendium '${compendiumName}'. Using '${foundEntry.name}' (Levenshtein Distance = ${foundLevDistance}) instead.`);
     }
 
-    return { query: name, value: foundEntry, exact: foundLevDistance <= 0 };
+    return { query: name, value: foundEntry.clone().data, exact: foundLevDistance <= 0 };
 }
 
 function fuzzyEquals(a, b, distanceThreshold, ignoreBracketedContent) {
