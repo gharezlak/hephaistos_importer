@@ -1,5 +1,5 @@
-# Hephaistos Importer
-A FoundryVTT module that allows importing of characters from [Hephaistos](https://hephaistos.azurewebsites.net/).
+# Hephaistos Importer for Foundry
+A FoundryVTT module that allows importing of characters & starships from [Hephaistos](https://hephaistos.azurewebsites.net/).
 
 ## Manual Installation
 1. Create a folder named `hephaistos-importer` wherever FoundryVTT loads it's modules from (usually `{userData}/Data/modules`).
