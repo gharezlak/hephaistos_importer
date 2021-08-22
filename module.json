@@ -5,10 +5,10 @@
     "author": "Hephaistos",
     "systems": ["sfrpg"],
     "esmodules": ["./esmodules/main.js"],
-    "version": "0.6.0",
+    "version": "0.7.0",
     "url": "https://gitlab.com/aetna/foundry-import-module",
-    "manifest": "https://gitlab.com/aetna/foundry-import-module/-/raw/0.6.0/module.json",
-    "download": "https://gitlab.com/aetna/foundry-import-module/-/archive/0.6.0/foundry-import-module-0.6.0.zip",
+    "manifest": "https://gitlab.com/aetna/foundry-import-module/-/raw/0.7.0/module.json",
+    "download": "https://gitlab.com/aetna/foundry-import-module/-/archive/0.7.0/foundry-import-module-0.7.0.zip",
     "minimumCoreVersion": "0.8.6",
     "compatibleCoreVersion": "0.8.6"
 }
