@@ -5,7 +5,7 @@
     "author": "Hephaistos",
     "systems": ["sfrpg"],
     "esmodules": ["./esmodules/main.js"],
-    "version": "0.8.0",
+    "version": "0.9.0",
     "url": "https://gitlab.com/aetna/foundry-import-module",
     "manifest": "https://gitlab.com/aetna/foundry-import-module/-/raw/0.8.0/module.json",
     "download": "https://gitlab.com/aetna/foundry-import-module/-/archive/0.8.0/foundry-import-module-0.8.0.zip",

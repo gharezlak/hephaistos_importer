@@ -38,6 +38,10 @@ export async function findSpell(name) {
 }
 
 export async function findClassFeature(feature) {
+    if (feature.startsWith('Weapon Specialization')) {
+        return undefined;
+    }
+    
     return await findInCompendium('Class Features', feature);
 }
 
