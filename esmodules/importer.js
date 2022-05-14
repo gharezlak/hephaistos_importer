@@ -212,7 +212,7 @@ async function importCharacter(data) {
             notFound.push(...featureResult.notFound);
 
             for (const opt of currentFeature.options) {
-                let optionResult = await importClassFeature(currentClass.name, opt);
+                let optionResult = await importClassFeature(`${currentClass.name}, ${currentFeature.name}`, opt);
                 items.push(...optionResult.items);
                 notFound.push(...optionResult.notFound);
             }

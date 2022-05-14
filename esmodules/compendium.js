@@ -30,6 +30,10 @@ export async function findFeat(name, isCombatFeat) {
 }
 
 export async function findEquipment(name) {
+    if (name === 'Battery, Standard') {
+        name = 'Battery';
+    }
+    
     return await findInCompendium('Equipment', name);
 }
 
