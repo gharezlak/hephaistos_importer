@@ -643,7 +643,7 @@ function importSkills(skills) {
             ability: ability,
             min: 0,
             ranks: skill.ranks,
-            value: 0,
+            value: skill.classSkill ? 3 : 9,
             misc: 0,
             mod: 0,
             subname: subname,
