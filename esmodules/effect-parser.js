@@ -139,7 +139,7 @@ function parseBonus(source, bonus) {
 
     const effectType = convert(effectTypeMapping, bonus.property);
     const valueAffected = convert(valueAffectedMapping, bonus.property);
-    
+
     if (!effectType) {
         SFHI.warn(`Failed to parse effectType from '${source}': ${JSON.stringify(bonus)}`);
         return undefined;
@@ -173,14 +173,14 @@ export async function parseAppend(actorData, params) {
             return;
         }
 
-        if (!actorData.data.traits.weaponProf) {
-            actorData.data.traits.weaponProf = {};
+        if (!actorData.system.traits.weaponProf) {
+            actorData.system.traits.weaponProf = {};
         }
 
-        if (actorData.data.traits.weaponProf.value) {
-            actorData.data.traits.weaponProf.value.push(value);
+        if (actorData.system.traits.weaponProf.value) {
+            actorData.system.traits.weaponProf.value.push(value);
         } else {
-            actorData.data.traits.weaponProf.value = [value];
+            actorData.system.traits.weaponProf.value = [value];
         }
     } else if (params.property === 'character.proficiency.armor') {
         const value = convert(armorTypeMapping, params.value?.armorType);
@@ -188,17 +188,17 @@ export async function parseAppend(actorData, params) {
             return;
         }
 
-        if (!actorData.data.traits.armorProf) {
-            actorData.data.traits.armorProf = {};
+        if (!actorData.system.traits.armorProf) {
+            actorData.system.traits.armorProf = {};
         }
 
-        if (actorData.data.traits.armorProf.value) {
-            actorData.data.traits.armorProf.value.push(value);
+        if (actorData.system.traits.armorProf.value) {
+            actorData.system.traits.armorProf.value.push(value);
         } else {
-            actorData.data.traits.armorProf.value = [value];
+            actorData.system.traits.armorProf.value = [value];
         }
     }
-} 
+}
 
 export async function parseEffect(actorData, source, effect) {
     if (effect.bonus) {

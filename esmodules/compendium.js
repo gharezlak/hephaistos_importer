@@ -33,7 +33,7 @@ export async function findEquipment(name) {
     if (name === 'Battery, Standard') {
         name = 'Battery';
     }
-    
+
     return await findInCompendium('Equipment', name);
 }
 
@@ -45,7 +45,7 @@ export async function findClassFeature(feature) {
     if (feature.startsWith('Weapon Specialization')) {
         return undefined;
     }
-    
+
     return await findInCompendium('Class Features', feature);
 }
 
@@ -60,7 +60,7 @@ async function findInCompendium(compendiumName, name, ignoreBracketedContent = t
     if (!name) {
         return undefined;
     }
-    
+
     const compendium = game.packs.find(element => element.title.includes(compendiumName));
     if (!compendium) {
         SFHI.error(`No compendium named '${compendiumName}' found.`);
@@ -76,7 +76,7 @@ async function findInCompendium(compendiumName, name, ignoreBracketedContent = t
 
     for (const entry of compendium.index) {
         const res = fuzzyEquals(entry.name, name, MAX_LEVENSHTEIN_DISTANCE, ignoreBracketedContent);
-        
+
         if (res === 0) {
             foundEntryId = entry._id;
             foundLevDistance = 0;
@@ -99,8 +99,7 @@ async function findInCompendium(compendiumName, name, ignoreBracketedContent = t
     if (foundLevDistance > 0) {
         SFHI.warn(`Exact match for '${name}' not found in compendium '${compendiumName}'. Using '${foundEntry.name}' (Levenshtein Distance = ${foundLevDistance}) instead.`);
     }
-
-    return { query: name, value: foundEntry.clone().data, exact: foundLevDistance <= 0 };
+    return { query: name, value: foundEntry.clone(), exact: foundLevDistance <= 0 };
 }
 
 function fuzzyEquals(a, b, distanceThreshold, ignoreBracketedContent) {
@@ -108,7 +107,7 @@ function fuzzyEquals(a, b, distanceThreshold, ignoreBracketedContent) {
     // into "words" using whitespace
     const processedA = processString(a, ignoreBracketedContent);
     const processedB = processString(b, ignoreBracketedContent);
-    
+
     if (processedA === processedB) {
         return 0;
     }
@@ -117,7 +116,7 @@ function fuzzyEquals(a, b, distanceThreshold, ignoreBracketedContent) {
     while (processedA.length < processedB.length) {
         processedA.push('');
     }
-    
+
     while (processedB.length < processedA.length) {
         processedB.push('');
     }

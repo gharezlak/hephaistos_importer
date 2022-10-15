@@ -2,13 +2,25 @@
     "name": "hephaistos-importer",
     "title": "Hephaistos Importer",
     "description": "A module to import characters, starships and more from Hephaistos",
-    "author": "Hephaistos",
-    "systems": ["sfrpg"],
+    "authors": [{
+        "name": "Hephaistos"
+    }],
+    "relationships": {
+        "systems": [
+            {
+                "id": "sfrpg",
+                "type": "system"
+            }
+        ]
+    },
     "esmodules": ["./esmodules/main.js"],
-    "version": "0.10.0",
+    "version": "0.11.0",
     "url": "https://gitlab.com/aetna/foundry-import-module",
-    "manifest": "https://gitlab.com/aetna/foundry-import-module/-/raw/0.10.0/module.json",
-    "download": "https://gitlab.com/aetna/foundry-import-module/-/archive/0.10.0/foundry-import-module-0.10.0.zip",
-    "minimumCoreVersion": "0.8.6",
-    "compatibleCoreVersion": "9"
+    "manifest": "https://gitlab.com/aetna/foundry-import-module/-/raw/0.11.0/module.json",
+    "download": "https://gitlab.com/aetna/foundry-import-module/-/archive/0.11.0/foundry-import-module-0.11.0.zip",
+    "compatibility": {
+        "minimum": "10",
+        "maximum": "10",
+        "verified": "10.288"
+    }
 }

@@ -4,7 +4,7 @@ import { HephaistosMissingItemsDialog } from './missing-items-dialog.js';
 
 export async function importJson(data) {
     if (!data?.version?.minor && !data?.version?.major) {
-        throw new Error("Incorrect data format. Please ensure that you are using the JSON file download from the Hephaistos website.");
+        throw new Error('Incorrect data format. Please ensure that you are using the JSON file download from the Hephaistos website.');
     }
 
     if (data.type === 'starship') {
@@ -41,7 +41,7 @@ async function importStarship(data) {
             items.push(res.value);
         } else {
             notFound.push({
-                name: name, 
+                name: name,
                 subtitle: subtitle,
                 compendium: res?.value,
                 find: (x) => findStarshipComponent(x),
@@ -71,16 +71,16 @@ async function importStarship(data) {
     for (const w of data.weapons) {
         const after = async (weapon) => {
             if (w.installedArc) {
-                await weapon.update({"data.mount": {
+                await weapon.updateSource({'system.mount': {
                     mounted: true,
                     arc: w.installedArc.toLowerCase(),
                 }});
-            };
+            }
         };
 
         await findComponent(w.name, 'Weapon', after);
     }
-    
+
     // Deal with the items that weren't found
     if (notFound.length !== 0) {
         let resolved = await resolveNotFound(notFound);
@@ -92,7 +92,7 @@ async function importStarship(data) {
     let starshipData = {
         name: data.name,
         type: 'starship',
-        data: {
+        system: {
             details: {
                 tier: data.tier,
             },
@@ -113,7 +113,7 @@ async function importStarship(data) {
 
     // Create Actor
     let actor = await Actor.create(starshipData);
-    await actor.createEmbeddedDocuments("Item", items);
+    await actor.createEmbeddedDocuments('Item', items.map(i => i._source));
 }
 
 async function importCharacter(data) {
@@ -136,7 +136,7 @@ async function importCharacter(data) {
                     parts.push([value, ability]);
                 }
 
-                await r.update({"data.abilityMods.parts": parts});
+                await r.updateSource({'system.abilityMods.parts': parts});
             }
         }
 
@@ -158,19 +158,19 @@ async function importCharacter(data) {
         }
 
         const knowledgeOptions = data.theme?.benefits
-            .filter(b => b.name.includes("Theme Knowledge") || b.name.includes("General Knowledge"))
+            .filter(b => b.name.includes('Theme Knowledge') || b.name.includes('General Knowledge'))
             .map(b => b.selectedOptions)
             .filter(x => !!x)
             .flat();
 
         const ability = knowledgeOptions.map(o => abilityFromString(o.name)).filter(x => !!x)?.[0];
         if (ability) {
-            await t.update({"data.abilityMod.ability": ability});
+            await t.updateSource({'system.abilityMod.ability': ability});
         }
 
         const skill = knowledgeOptions.map(o => skillFromString(o.name)).filter(x => !!x)?.[0];
         if (skill) {
-            await t.update({"data.skill": skill});
+            await t.updateSource({'system.skill': skill});
         }
     };
     if (theme) {
@@ -187,7 +187,8 @@ async function importCharacter(data) {
     // Import Classes
     for (const currentClass of data.classes) {
         const after = async (x) =>  {
-            await x.update({"data.levels": currentClass.levels});
+            await x.updateSource({'system.levels': currentClass.levels});
+            console.warn(x);
         }
 
         const compendiumClass = await findClass(currentClass.name);
@@ -197,7 +198,7 @@ async function importCharacter(data) {
             items.push(compendiumClass.value);
         } else {
             notFound.push({
-                name: currentClass.name, 
+                name: currentClass.name,
                 subtitle: `Class`,
                 compendium: compendiumClass?.value,
                 find: (x) => findClass(x),
@@ -238,7 +239,7 @@ async function importCharacter(data) {
             if (spellLevel === undefined && spell.level) {
                 spellLevel = spell.level[0].level;
             }
-            const after = async (x) => { await x.update({"data.level": spellLevel}); };
+            const after = async (x) => { await x.updateSource({'system.level': spellLevel}); };
 
             const compendiumSpell = await findSpell(spell.name);
             if (compendiumSpell?.exact) {
@@ -246,7 +247,7 @@ async function importCharacter(data) {
                 items.push(compendiumSpell.value);
             } else {
                 notFound.push({
-                    name: spell.name, 
+                    name: spell.name,
                     subtitle: 'Spell',
                     compendium: compendiumSpell?.value,
                     find: (x) => findSpell(x),
@@ -260,7 +261,7 @@ async function importCharacter(data) {
     let characterData = {
         name: data.name,
         type: 'character',
-        data: {
+        system: {
             abilities: importAbilities(data.abilityScores),
             skills: importSkills(data.skills),
             conditions: importConditions(data.conditions),
@@ -293,8 +294,8 @@ async function importCharacter(data) {
 
     // Create Actor
     let actor = await Actor.create(characterData);
-    await actor.createEmbeddedDocuments("Item", items);
-    
+    await actor.createEmbeddedDocuments('Item', items.map(i => i._source));
+
     await addAbilityIncreases(actor, data.abilityScores.increases);
     return actor;
 }
@@ -308,9 +309,9 @@ async function importDrone(data) {
         const chassis = await findClassFeature(data.chassis.name);
         if (chassis) {
             const after = async (c) => {
-                await c.update({"data.levels": data.level});
+                await c.updateSource({'system.levels': data.level});
             }
-    
+
             if (chassis.exact) {
                 await after(chassis.value);
                 items.push(chassis.value);
@@ -321,7 +322,7 @@ async function importDrone(data) {
             notFound.push({name: chassis.query, subtitle: 'Drone Chassis', find: (x) => findClassFeature(x), after: after});
         }
     }
-    
+
     // Import Special Abilities
     for (const ability of data.specialAbilities) {
         let abilityResult = await importClassFeature('Drone Special Ability', ability);
@@ -344,7 +345,7 @@ async function importDrone(data) {
     let droneData = {
         name: data.name,
         type: 'drone',
-        data: {
+        system: {
             abilities: importAbilities(data.abilityScores),
             skills: importSkills(data.skills),
             conditions: importConditions(data.conditions),
@@ -365,7 +366,7 @@ async function importDrone(data) {
     let featResult = await importFeats(data.feats.acquiredFeats, droneData);
     items.push(...featResult.items);
     notFound.push(...featResult.notFound);
-    
+
     // Deal with the items that weren't found
     if (notFound.length !== 0) {
         let resolved = await resolveNotFound(notFound);
@@ -376,8 +377,8 @@ async function importDrone(data) {
 
     // Create Actor
     let actor = await Actor.create(droneData);
-    await actor.createEmbeddedDocuments("Item", items);
-    
+    await actor.createEmbeddedDocuments('Item', items.map(i => i._source));
+
     return actor;
 }
 
@@ -451,18 +452,18 @@ function abilityFromString(str) {
         return undefined;
     }
 
-    if (str.toLowerCase().includes("strength")) {
-        return "str";
-    } else if (str.toLowerCase().includes("dexterity")) {
-        return "dex";
-    } else if (str.toLowerCase().includes("constitution")) {
-        return "con";
-    } else if (str.toLowerCase().includes("intelligence")) {
-        return "int";
-    } else if (str.toLowerCase().includes("wisdom")) {
-        return "wis";
-    } else if (str.toLowerCase().includes("charisma")) {
-        return "cha";
+    if (str.toLowerCase().includes('strength')) {
+        return 'str';
+    } else if (str.toLowerCase().includes('dexterity')) {
+        return 'dex';
+    } else if (str.toLowerCase().includes('constitution')) {
+        return 'con';
+    } else if (str.toLowerCase().includes('intelligence')) {
+        return 'int';
+    } else if (str.toLowerCase().includes('wisdom')) {
+        return 'wis';
+    } else if (str.toLowerCase().includes('charisma')) {
+        return 'cha';
     }
 
     return undefined;
@@ -473,67 +474,67 @@ function skillFromString(str) {
         return undefined;
     }
 
-    if (str.toLowerCase().includes("athletics")) {
-        return "ath";
+    if (str.toLowerCase().includes('athletics')) {
+        return 'ath';
     }
-    else if (str.toLowerCase().includes("acrobatics")) {
-        return "acr";
+    else if (str.toLowerCase().includes('acrobatics')) {
+        return 'acr';
     }
-    else if (str.toLowerCase().includes("bluff")) {
-        return "blu";
+    else if (str.toLowerCase().includes('bluff')) {
+        return 'blu';
     }
-    else if (str.toLowerCase().includes("computers")) {
-        return "com";
+    else if (str.toLowerCase().includes('computers')) {
+        return 'com';
     }
-    else if (str.toLowerCase().includes("culture")) {
-        return "cul";
+    else if (str.toLowerCase().includes('culture')) {
+        return 'cul';
     }
-    else if (str.toLowerCase().includes("diplomacy")) {
-        return "dip";
+    else if (str.toLowerCase().includes('diplomacy')) {
+        return 'dip';
     }
-    else if (str.toLowerCase().includes("disguise")) {
-        return "dis";
+    else if (str.toLowerCase().includes('disguise')) {
+        return 'dis';
     }
-    else if (str.toLowerCase().includes("engineering")) {
-        return "eng";
+    else if (str.toLowerCase().includes('engineering')) {
+        return 'eng';
     }
-    else if (str.toLowerCase().includes("intimidate")) {
-        return "int";
+    else if (str.toLowerCase().includes('intimidate')) {
+        return 'int';
     }
-    else if (str.toLowerCase().includes("life Science")) {
-        return "lsc";
+    else if (str.toLowerCase().includes('life Science')) {
+        return 'lsc';
     }
-    else if (str.toLowerCase().includes("medicine")) {
-        return "med";
+    else if (str.toLowerCase().includes('medicine')) {
+        return 'med';
     }
-    else if (str.toLowerCase().includes("mysticism")) {
-        return "mys";
+    else if (str.toLowerCase().includes('mysticism')) {
+        return 'mys';
     }
-    else if (str.toLowerCase().includes("perception")) {
-        return "per";
+    else if (str.toLowerCase().includes('perception')) {
+        return 'per';
     }
-    else if (str.toLowerCase().includes("physical Science")) {
-        return "phs";
+    else if (str.toLowerCase().includes('physical Science')) {
+        return 'phs';
     }
-    else if (str.toLowerCase().includes("piloting")) {
-        return "pil";
+    else if (str.toLowerCase().includes('piloting')) {
+        return 'pil';
     }
-    else if (str.toLowerCase().includes("profession")) {
-        return "pro";
+    else if (str.toLowerCase().includes('profession')) {
+        return 'pro';
     }
-    else if (str.toLowerCase().includes("sense motive")) {
-        return "sen";
+    else if (str.toLowerCase().includes('sense motive')) {
+        return 'sen';
     }
-    else if (str.toLowerCase().includes("sleight of hand")) {
-        return "sle";
+    else if (str.toLowerCase().includes('sleight of hand')) {
+        return 'sle';
     }
-    else if (str.toLowerCase().includes("stealth")) {
-        return "ste";
+    else if (str.toLowerCase().includes('stealth')) {
+        return 'ste';
     }
-    else if (str.toLowerCase().includes("survival")) {
-        return "sur";
+    else if (str.toLowerCase().includes('survival')) {
+        return 'sur';
     }
-    
+
     return undefined;
 }
 
@@ -575,7 +576,7 @@ function calculateKeyAbility(classes) {
         return classes[0].keyAbility.toLowerCase().substring(0, 3);
     }
 
-    // else find the most "popular" key ability
+    // else find the most 'popular' key ability
     let keyAbilities = new Map();
     for(const c of classes) {
         if (keyAbilities.has(c.keyAbility)) {
@@ -657,41 +658,41 @@ function importSkills(skills) {
 
 function importConditions(conditions) {
     return {
-        "asleep": conditions.asleep.active,
-        "bleeding": conditions.bleeding.active,
-        "blinded": conditions.blinded.active,
-        "broken": conditions.broken.active,
-        "burning": conditions.burning.active,
-        "confused": conditions.confused.active,
-        "cowering": conditions.cowering.active,
-        "dazed": conditions.dazed.active,
-        "dazzled": conditions.dazzled.active,
-        "dead": conditions.dead.active,
-        "deafened": conditions.deafened.active,
-        "dying": conditions.dying.active,
-        "encumbered": conditions.encumbered.active,
-        "entangled": conditions.entangled.active,
-        "exhausted": conditions.exhausted.active,
-        "fascinated": conditions.fascinated.active,
-        "fatigued": conditions.fatigued.active,
-        "flat-footed": conditions.flatFooted.active,
-        "frightened": conditions.frightened.active,
-        "grappled": conditions.grappled.active,
-        "helpless": conditions.helpless.active,
-        "nauseated": conditions.nauseated.active,
-        "off-kilter": conditions.offKilter.active,
-        "off-target": conditions.offTarget.active,
-        "overburdened": conditions.overburdened.active,
-        "panicked": conditions.panicked.active,
-        "paralyzed": conditions.paralyzed.active,
-        "pinned": conditions.pinned.active,
-        "prone": conditions.prone.active,
-        "shaken": conditions.shaken.active,
-        "sickened": conditions.sickened.active,
-        "stable": conditions.stable.active,
-        "staggered": conditions.staggered.active,
-        "stunned": conditions.stunned.active,
-        "unconscious": conditions.unconscious.active,
+        'asleep': conditions.asleep.active,
+        'bleeding': conditions.bleeding.active,
+        'blinded': conditions.blinded.active,
+        'broken': conditions.broken.active,
+        'burning': conditions.burning.active,
+        'confused': conditions.confused.active,
+        'cowering': conditions.cowering.active,
+        'dazed': conditions.dazed.active,
+        'dazzled': conditions.dazzled.active,
+        'dead': conditions.dead.active,
+        'deafened': conditions.deafened.active,
+        'dying': conditions.dying.active,
+        'encumbered': conditions.encumbered.active,
+        'entangled': conditions.entangled.active,
+        'exhausted': conditions.exhausted.active,
+        'fascinated': conditions.fascinated.active,
+        'fatigued': conditions.fatigued.active,
+        'flat-footed': conditions.flatFooted.active,
+        'frightened': conditions.frightened.active,
+        'grappled': conditions.grappled.active,
+        'helpless': conditions.helpless.active,
+        'nauseated': conditions.nauseated.active,
+        'off-kilter': conditions.offKilter.active,
+        'off-target': conditions.offTarget.active,
+        'overburdened': conditions.overburdened.active,
+        'panicked': conditions.panicked.active,
+        'paralyzed': conditions.paralyzed.active,
+        'pinned': conditions.pinned.active,
+        'prone': conditions.prone.active,
+        'shaken': conditions.shaken.active,
+        'sickened': conditions.sickened.active,
+        'stable': conditions.stable.active,
+        'staggered': conditions.staggered.active,
+        'stunned': conditions.stunned.active,
+        'unconscious': conditions.unconscious.active,
     }
 }
 
@@ -755,10 +756,10 @@ async function addAbilityIncreases(actor, increases) {
             }
         };
 
-        await actor.createEmbeddedDocuments("Item", [{
+        await actor.createEmbeddedDocuments('Item', [{
             name: name,
             type: 'asi',
-            data: data,
+            system: data,
         }]);
     }
 }
@@ -788,13 +789,13 @@ async function importEquipment(inventory) {
 
     for (const currentEquipment of inventory) {
         const after = async (x) => {
-            await x.update({"data.equipped": currentEquipment.isEquipped});
+            await x.updateSource({'system.equipped': currentEquipment.isEquipped});
 
             let contents = [];
             contents.push(...await addEnhancements(currentEquipment.fusionIds, inventory));
             contents.push(...await addEnhancements(currentEquipment.accessoryIds, inventory));
             contents.push(...await addEnhancements(currentEquipment.upgradeIds, inventory));
-            await x.update({"data.container.contents": contents});
+            await x.updateSource({'system.container.contents': contents});
         };
 
         // TODO: Item option selection
@@ -804,7 +805,7 @@ async function importEquipment(inventory) {
             items.push(compendiumEquipment.value);
         } else {
             notFound.push({
-                name: currentEquipment.name, 
+                name: currentEquipment.name,
                 subtitle: 'Equipment',
                 compendium: compendiumEquipment?.value,
                 find: (x) => findEquipment(x),
@@ -849,10 +850,10 @@ async function importFeats(feats, actorData) {
         }
 
         if (modifiers.length > 0) {
-            await x.update({"data.modifiers": modifiers});
+            await x.updateSource({'system.modifiers': modifiers});
         }
     };
-    
+
     for (const currentFeat of feats) {
         // TODO: Feat option selection
         const compendiumFeat = await findFeat(currentFeat.name, currentFeat.isCombatFeat);
@@ -861,7 +862,7 @@ async function importFeats(feats, actorData) {
             items.push(compendiumFeat.value);
         } else {
             notFound.push({
-                name: currentFeat.name, 
+                name: currentFeat.name,
                 subtitle: 'Feat',
                 compendium: compendiumFeat?.value,
                 find: (x) => findFeat(x),
@@ -869,7 +870,7 @@ async function importFeats(feats, actorData) {
             });
         }
     }
-    
+
     return {items: items, notFound: notFound};
 }
 
@@ -882,12 +883,12 @@ async function importClassFeature(subtitle, classFeature) {
         items.push(compendiumFeature.value);
     } else {
         notFound.push({
-            name: classFeature.name, 
+            name: classFeature.name,
             subtitle: `Class Feature (${subtitle})`,
             compendium: compendiumFeature?.value,
             find: (x) => findClassFeature(x),
         });
     }
-    
+
     return {items: items, notFound: notFound};
 }
