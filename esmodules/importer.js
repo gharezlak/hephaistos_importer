@@ -271,6 +271,17 @@ async function importCharacter(data) {
             },
             traits: {
                 size: data.race?.size.toLowerCase(),
+                senses: data.senses?.map(s => {
+                    let name = s.senseType;
+                    if (s.additionalInfo) {
+                        name += ` (${s.additionalInfo})`;
+                    }
+
+                    if (s.range) {
+                        name += ` ${s.range} ft.`;
+                    }
+                    return name;
+                }).join(", ")
             },
             attributes: {
                 keyability: calculateKeyAbility(data.classes),
