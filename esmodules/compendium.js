@@ -10,7 +10,7 @@ export async function findRace(race, abilityAdjustment) {
         name += ' (' + abilityAdjustment + ')';
     }
 
-    return await findInCompendium('Races', name, false);
+    return await findInCompendium('Species', name, false);
 }
 
 export async function findTheme(name) {

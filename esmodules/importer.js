@@ -579,7 +579,7 @@ function importSpeed(speed) {
 }
 
 function calculateKeyAbility(classes) {
-    if (!classes) {
+    if (!classes || classes.length === 0) {
         return undefined;
     }
 

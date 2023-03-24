@@ -14,10 +14,10 @@
         ]
     },
     "esmodules": ["./esmodules/main.js"],
-    "version": "0.12.0",
+    "version": "0.13.0",
     "url": "https://gitlab.com/aetna/foundry-import-module",
-    "manifest": "https://gitlab.com/aetna/foundry-import-module/-/raw/0.12.0/module.json",
-    "download": "https://gitlab.com/aetna/foundry-import-module/-/archive/0.12.0/foundry-import-module-0.12.0.zip",
+    "manifest": "https://gitlab.com/aetna/foundry-import-module/-/raw/0.13.0/module.json",
+    "download": "https://gitlab.com/aetna/foundry-import-module/-/archive/0.13.0/foundry-import-module-0.13.0.zip",
     "compatibility": {
         "minimum": "10",
         "maximum": "10",
