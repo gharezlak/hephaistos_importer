@@ -6,6 +6,9 @@ A FoundryVTT module that allows importing of characters & starships from [Hephai
 1. Download and extract the source of this repository into the `hephaistos-importer` folder.
 
 ## Use
+
+> Importing characters into FoundryVTT requires you to either have the Game Master role, have the Assistant role, or have the permission to create new Actors.
+
 1. In Hephaistos, open your character and download it as JSON.
 1. In FoundryVTT, navigate to the *Actors* tab and click the **Import From Hephaistos** button at the bottom.
 1. Select the downloaded JSON file and click **Import**.
