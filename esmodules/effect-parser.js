@@ -9,6 +9,12 @@ const effectTypeMapping = [
     ['character.damage.operativeMelee', 'weapon-property-damage'],
     [/character\.damage\..*/, 'weapon-damage'],
     [/character\.attack\..*/, 'weapon-attacks'],
+    ['character.strength', 'ability-score'],
+    ['character.dexterity', 'ability-score'],
+    ['character.constitution', 'ability-score'],
+    ['character.intelligence', 'ability-score'],
+    ['character.wisdom', 'ability-score'],
+    ['character.charisma', 'ability-score'],
 ];
 
 const valueAffectedMapping = [
@@ -21,6 +27,12 @@ const valueAffectedMapping = [
     [/.*grenade/, 'grenade'],
     [/.*special/, ''],
     [/.*solarian/, ''],
+    ['character.strength', 'str'],
+    ['character.dexterity', 'dex'],
+    ['character.constitution', 'con'],
+    ['character.intelligence', 'int'],
+    ['character.wisdom', 'wis'],
+    ['character.charisma', 'cha'],
 ];
 
 const weaponTypeMapping = [

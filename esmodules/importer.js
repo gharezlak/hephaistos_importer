@@ -220,11 +220,6 @@ async function importCharacter(data) {
         }
     }
 
-    // Import Equipment
-    let equipmentResult = await importEquipment(data.inventory);
-    items.push(...equipmentResult.items);
-    notFound.push(...equipmentResult.notFound);
-
     // Import Spells
     for (const currentClass of data.classes) {
         for (const spell of currentClass.spells) {
@@ -289,6 +284,11 @@ async function importCharacter(data) {
             },
         },
     };
+
+    // Import Equipment
+    let equipmentResult = await importEquipment(data.inventory, characterData);
+    items.push(...equipmentResult.items);
+    notFound.push(...equipmentResult.notFound);
 
     // Import Feats
     let featResult = await importFeats(data.feats.acquiredFeats, characterData);
@@ -794,12 +794,12 @@ async function addEnhancements(enhancementIds, inventory) {
     return enhancement;
 }
 
-async function importEquipment(inventory) {
+async function importEquipment(inventory, actorData) {
     let items = [];
     let notFound = [];
 
     for (const currentEquipment of inventory) {
-        const after = async (x) => {
+        const after = async (item, x) => {
             await x.updateSource({'system.equipped': currentEquipment.isEquipped});
 
             let contents = [];
@@ -807,12 +807,31 @@ async function importEquipment(inventory) {
             contents.push(...await addEnhancements(currentEquipment.accessoryIds, inventory));
             contents.push(...await addEnhancements(currentEquipment.upgradeIds, inventory));
             await x.updateSource({'system.container.contents': contents});
+
+            let modifiers = [];
+            if (item.effect) {
+                let mods = await parseEffects(actorData, item.name, item.effect);
+                modifiers.push(...mods);
+            }
+
+            if (item.selectedOptions) {
+                for (const so of item.selectedOptions) {
+                    if (so.effect) {
+                        let mods = await parseEffects(actorData, `${item.name} (${so.name})`, so.effect);
+                        modifiers.push(...mods);
+                    }
+                }
+            }
+
+            if (modifiers.length > 0) {
+                await x.updateSource({'system.modifiers': modifiers});
+            }
         };
 
         // TODO: Item option selection
         const compendiumEquipment = await findEquipment(currentEquipment.name);
         if (compendiumEquipment?.exact) {
-            await after(compendiumEquipment.value);
+            await after(currentEquipment, compendiumEquipment.value);
             items.push(compendiumEquipment.value);
         } else {
             notFound.push({
@@ -820,7 +839,7 @@ async function importEquipment(inventory) {
                 subtitle: 'Equipment',
                 compendium: compendiumEquipment?.value,
                 find: (x) => findEquipment(x),
-                after: after,
+                after: async (x) => await after(currentEquipment, x),
             });
         }
     }
@@ -828,33 +847,33 @@ async function importEquipment(inventory) {
     return {items: items, notFound: notFound};
 }
 
+const parseEffects = async (actorData, name, effects) => {
+    let mod = [];
+    for (const e of effects) {
+        let res = await parseEffect(actorData, name, e);
+        if (res) {
+            mod.push(res);
+        }
+    }
+
+    return mod;
+};
+
 async function importFeats(feats, actorData) {
     let items = [];
     let notFound = [];
 
     const after = async (feat, x) => {
-        const parseEffects = async (name, effects) => {
-            let mod = [];
-            for (const e of effects) {
-                let res = await parseEffect(actorData, name, e);
-                if (res) {
-                    mod.push(res);
-                }
-            }
-
-            return mod;
-        };
-
         let modifiers = []
         if (feat.benefitEffect) {
-            let mods = await parseEffects(feat.name, feat.benefitEffect);
+            let mods = await parseEffects(actorData, feat.name, feat.benefitEffect);
             modifiers.push(...mods);
         }
 
         if (feat.selectedOptions) {
             for (const so of feat.selectedOptions) {
                 if (so.effect) {
-                    let mods = await parseEffects(`${feat.name} (${so.name})`, so.effect);
+                    let mods = await parseEffects(actorData, `${feat.name} (${so.name})`, so.effect);
                     modifiers.push(...mods);
                 }
             }
