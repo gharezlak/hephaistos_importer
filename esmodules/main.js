@@ -29,7 +29,7 @@ function addImportButton() {
                 content: `
                     <div style="text-align:center;">
                         <p style="font-size: 2rem; margin: 0.25em 0;">
-                            <i class="fas fa-cog" style="animation: rotation 2.5s infinite linear;"></i>
+                            <i class="fas fa-cog fa-spin"></i>
                         </p>
                         <p>Importing...</p>
                     </div>`,
@@ -41,7 +41,7 @@ function addImportButton() {
             try {
                 const text = await file.text();
                 await importJson(JSON.parse(text));
-                
+
                 await loadingDialog.close();
             } catch(e) {
                 await loadingDialog.close();
@@ -71,10 +71,17 @@ function addImportButton() {
     }
 }
 
-/** Ensure the 'Parse Statblock' button is visible. */
+/** Ensure the import button is visible (Foundry v10 and lower). */
 Hooks.on('renderSidebarTab', async (app, html) => {
-    if (app.options.id == 'actors') {
+    if (app.options.id === 'actors') {
         addImportButton();
     }
 });
 
+
+/** Ensure the import button is visible (Foundry v11). */
+Hooks.on("renderActorDirectory", async (app, html) => {
+    if (app.id == "actors") {
+        addImportButton();
+    }
+});
