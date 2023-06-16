@@ -886,15 +886,57 @@ async function importFeats(feats, actorData) {
 }
 
 async function importClassFeature(subtitle, classFeature) {
+    const specialCases = [
+        {
+            name: 'Weapon Specialization',
+            replacement: undefined,
+        },
+        {
+            name: 'Shield Proficiency',
+            replacement: undefined,
+        },
+        {
+            name: 'Heavy Weapon & Heavy Armor Proficiency',
+            replacement: undefined,
+        },
+        {
+            name: 'Primary Fighting Style',
+            replacement: 'Fighting Style',
+        },
+        {
+            name: 'Primary Fighting Technique',
+            replacement: 'Primary Style Technique',
+        },
+        {
+            name: 'Secondary Fighting Style',
+            replacement: 'Fighting Style',
+        },
+        {
+            name: 'Secondary Fighting Technique',
+            replacement: 'Secondary Style Technique',
+        },
+    ];
+
+    let classFeatureName = classFeature.name;
+
+    const specialCase = specialCases.find(sc => classFeatureName.startsWith(sc.name));
+    if (specialCase) {
+        if (specialCase.replacement) {
+            classFeatureName = specialCase.replacement;
+        } else {
+            return { items: [], notFound: [] };
+        }
+    }
+
     let items = [];
     let notFound = [];
 
-    const compendiumFeature = await findClassFeature(classFeature.name);
+    const compendiumFeature = await findClassFeature(classFeatureName);
     if (compendiumFeature?.exact) {
         items.push(compendiumFeature.value);
     } else {
         notFound.push({
-            name: classFeature.name,
+            name: classFeatureName,
             subtitle: `Class Feature (${subtitle})`,
             compendium: compendiumFeature?.value,
             find: (x) => findClassFeature(x),
