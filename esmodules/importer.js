@@ -1,4 +1,14 @@
-import { findRace, findTheme, findClass, findFeat, findEquipment, findSpell, findClassFeature, findStarshipComponent } from './compendium.js';
+import {
+    findRace,
+    findTheme,
+    findClass,
+    findFeat,
+    findEquipment,
+    findSpell,
+    findClassFeature,
+    findStarshipComponent,
+    findSpeciesTrait
+} from './compendium.js';
 import { parseEffect } from './effect-parser.js';
 import { HephaistosMissingItemsDialog } from './missing-items-dialog.js';
 
@@ -148,6 +158,14 @@ async function importCharacter(data) {
         }
     } else if (data.race) {
         notFound.push({name: race.query, subtitle: 'Race', find: (x) => findRace(x), after: after});
+    }
+
+    if (data.race) {
+        for (const trait of data.race.selectedTraits) {
+            const result = await importSpeciesTrait(data.race.name, trait);
+            items.push(...result.items);
+            notFound.push(...result.notFound);
+        }
     }
 
     // Import Theme
@@ -959,6 +977,25 @@ async function importClassFeature(subtitle, classFeature) {
             subtitle: `Class Feature (${subtitle})`,
             compendium: compendiumFeature?.value,
             find: (x) => findClassFeature(x),
+        });
+    }
+
+    return {items: items, notFound: notFound};
+}
+
+async function importSpeciesTrait(subtitle, trait) {
+    let items = [];
+    let notFound = [];
+
+    const compendiumFeature = await findSpeciesTrait(trait.name);
+    if (compendiumFeature?.exact) {
+        items.push(compendiumFeature.value);
+    } else {
+        notFound.push({
+            name: trait.name,
+            subtitle: `Species Feature (${subtitle})`,
+            compendium: compendiumFeature?.value,
+            find: (x) => findSpeciesTrait(x),
         });
     }
 

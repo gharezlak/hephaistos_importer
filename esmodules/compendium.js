@@ -13,6 +13,10 @@ export async function findRace(race, abilityAdjustment) {
     return await findInCompendium('Species', name, false);
 }
 
+export async function findSpeciesTrait(name) {
+    return await findInCompendium('Species Features', name);
+}
+
 export async function findTheme(name) {
     return await findInCompendium('Themes', name);
 }
