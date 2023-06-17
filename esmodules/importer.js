@@ -234,6 +234,14 @@ async function importCharacter(data) {
                 let optionResult = await importClassFeature(`${currentClass.name}, ${currentFeature.name}`, opt);
                 items.push(...optionResult.items);
                 notFound.push(...optionResult.notFound);
+
+                if (opt.effects) {
+                    for (const effect of opt.effects) {
+                        let effectResult = await importClassFeature(`${currentClass.name}, ${currentFeature.name}, ${opt.name}`, effect);
+                        items.push(...effectResult.items);
+                        notFound.push(...effectResult.notFound);
+                    }
+                }
             }
         }
     }
