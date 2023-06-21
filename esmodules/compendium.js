@@ -34,11 +34,43 @@ export async function findFeat(name, isCombatFeat) {
 }
 
 export async function findEquipment(name) {
-    if (name === 'Battery, Standard') {
-        name = 'Battery';
-    }
+    let nameMap = new Map([
+        ['Battery, Standard', 'Battery'],
+        ["Tool Kit (Catalyst Rig)", "Tool Kit, Akinzi Resources, Catalyst Rig"],
+        ["Tool Kit (Grifter’s Kit)", "Tool Kit, Akinzi Resources, Grifter’s Kit"],
+        ["Tool Kit (Gymnast’s Kit)", "Tool Kit, Akinzi Resources, Gymnast’s Kit"],
+        ["Tool Kit (Influencer Kit)", "Tool Kit, Akinzi Resources, Influencer Kit"],
+        ["Tool Kit (Swimmer’s Kit)", "Tool Kit, Akinzi Resources, Swimmer’s Kit"],
+        ["Tool Kit (Tourist’s Kit)", "Tool Kit, Akinzi Resources, Tourist’s Kit"],
+        ["Tool Kit (Tracker’s Kit)", "Tool Kit, Akinzi Resources, Tracker's Kit"],
+        ["Tool Kit (Disguise Kit)", "Tool Kit, Disguise Kit"],
+        ["Tool Kit (Engineering Kit)", "Tool Kit, Engineering Kit"],
+        ["Tool Kit, Engineering Specialty", "Tool Kit, Engineering Specialty"],
+        ["Tool Kit, (Armorcrafter Kit)", "Tool Kit, Engineering Specialty, Armorcrafter Kit"],
+        ["Tool Kit, (Weaponsmithing Kit)", "Tool Kit, Engineering Specialty, Weaponsmithing Kit"],
+        ["Tool Kit (Hacking Kit)", "Tool Kit, Hacking Kit"],
+        ["Tool Kit (Navigator's Tools)", "Tool Kit, Navigator's Tools"],
+        ["Tool Kit (Professional's Tools)", "Tool Kit, Professional's Tools"],
+        ["Tool Kit (Rider's Kit)", "Tool Kit, Rider's Kit"],
+        ["Tool Kit (Animal Trainer's Kit)", "Tool Kit, Starfinder Armory, Animal Trainer’s Kit"],
+        ["Tool Kit (Aura-Translation Kit)", "Tool Kit, Starfinder Armory, Aura-Translation Kit"],
+        ["Tool Kit (Broad-Spectrum Scanning Kit)", "Tool Kit, Starfinder Armory, Broad-Spectrum Scanning Kit"],
+        ["Tool Kit (Light-Scattering Sniper's Blind)", "Tool Kit, Starfinder Armory, Light-Scattering Sniper’s Blind"],
+        ["Tool Kit (Mental Interpretation Kit)", "Tool Kit, Starfinder Armory, Mental Interpretation Kit"],
+        ["Tool Kit (Personal Gravitational Redistributor)", "Tool Kit, Starfinder Armory, Personal Gravitational Redistributor"],
+        ["Tool Kit (Thieves' Tools)", "Tool Kit, Starfinder Armory, Thieves’ Tools"],
+        ["Tool Kit (Trapsmith's Tools)", "Tool Kit, Trapsmith's Tools"],
+        ["Tool Kit (Climbing Kit)", "Tool Kit, Xhinti Holdings, Climbing Kit"],
+        ["Tool Kit (Demolitionist's Kit)", "Tool Kit, Xhinti Holdings, Demolitionist’s Kit"],
+        ["Tool Kit (Linguist's Kit)", "Tool Kit, Xhinti Holdings, Linguist’s Kit"],
+        ["Tool Kit (Portable Weather Station)", "Tool Kit, Xhinti Holdings, Portable Weather Station"],
+        ["Tool Kit (Starship Repair Kit)", "Tool Kit, Xhinti Holdings, Starship Repair Kit"],
+        ["Tool Kit (Survivalist's Kit)", "Tool Kit, Xhinti Holdings, Survivalist’s Kit"],
+    ]);
 
-    return await findInCompendium('Equipment', name);
+    let newName = nameMap.has(name) ? nameMap.get(name) : name;
+
+    return await findInCompendium('Equipment', newName);
 }
 
 export async function findSpell(name) {
